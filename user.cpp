@@ -18,13 +18,17 @@ int main(int argc, char **argv) {
     struct sockaddr_in addr;
     char buffer[128];
 
+    /* Default IP and PORT values */
+    char* ASIP = (char*) "127.0.0.1";
+    char* ASport = (char*) PORT;
 
-    const char* ASIP = argv[1];
-    char* ASport;
-    if (argc == 3)
-        ASport = argv[2];
-    else
-        ASport = (char*) PORT;
+    if (argc >= 2) /* At least one argument */
+        for (int i = 1; i < argc; i += 2) {
+            if (strcmp(argv[i], "-n") == 0)
+                ASIP = argv[i+1];
+            else if (strcmp(argv[i], "-p") == 0)
+                ASport = argv[i+1];
+        }
     
     printf("ASIP = %s, ASport = %s\n", ASIP, ASport);
 
@@ -41,14 +45,16 @@ int main(int argc, char **argv) {
     while(1) {
         fgets(buffer, 128, stdin);
         char *token = strtok(buffer, " ");
-        if (token != NULL && strcmp(token, "login") == 0) {
+
+        if (token != NULL && strcmp(token, "login") == 0) { // Make it into function "parse_login()"?
             token = strtok(NULL, " ");
             char UID[7];
             strcpy(UID, token);
-            char *pw;
-            /*token = strtok(NULL, " ");
-            strcpy(pw, token);*/
-            printf("UID = %s, password = %s\n", UID, pw);
+            char pw[9];
+            token = strtok(NULL, " ");
+            strcpy(pw, token); // Check if password format is correct?
+
+            //Send to server
         }
     }
 
