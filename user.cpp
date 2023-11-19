@@ -7,21 +7,44 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <string.h>
+#include <ctype.h>
 
 #define PORT "58011"
 
-int fd,errcode;
+int UDP_fd,TCP_fd,errcode;
 ssize_t n;
 socklen_t addrlen;
 struct addrinfo hints,*res;
 struct sockaddr_in addr;
 char buffer[128];
 
+bool check_UID_format(char* UID) {
+    if (UID == NULL || strlen(UID) != 6)
+        return false;
+    
+    for (int i= 0; i < 6; i++)
+        if (!isdigit(UID[i]))
+            return false;
+    
+    return true;
+}
+
+bool check_password_format(char* password) {
+    if (password == NULL || strlen(password) != 8)
+        return false;
+    
+    for (int i= 0; i < 8; i++)
+        if (!isalnum(password[i]))
+            return false;
+    
+    return true;
+}
+
 int main(int argc, char **argv) {
 
     bool logged_in = false;
-    char UID_current[7];
-    char pw[9];
+    char *UID_current;
+    char *password_current;
 
     /* Default IP and PORT values */
     char* ASIP = (char*) "127.0.0.1";
@@ -35,10 +58,10 @@ int main(int argc, char **argv) {
                 ASport = argv[i+1]; // The Port follows after "-p"
         }
     
-    printf("ASIP = %s, ASport = %s\n", ASIP, ASport);
+    printf("ASIP = %s, ASport = %s,\n", ASIP, ASport);
 
-    fd=socket(AF_INET,SOCK_DGRAM,0); //UDP socket
-    if(fd==-1) /*error*/ exit(1);
+    UDP_fd=socket(AF_INET,SOCK_DGRAM,0); //UDP socket
+    if(UDP_fd==-1) /*error*/ exit(1);
 
     memset(&hints,0,sizeof hints);
     hints.ai_family=AF_INET; //IPv4
@@ -54,43 +77,88 @@ int main(int argc, char **argv) {
 
         if (token != NULL && strcmp(token, "login") == 0) { // Make it into function "parse_login()"?
 
-            printf("entered login command\n");
-
             char UID[7];
-            token = strtok(NULL, " ");
-            if (token != NULL)
-                strcpy(UID, token);
-            token = strtok(NULL, " ");
-            if (token != NULL)
-                strcpy(pw, token); // Check if password format is correct?
+            token = strtok(NULL, " \n");
 
-            // sends to AS using UDP
-            // AS logs in if UID and PW are correct, or registers user if UID not present
-            // prints result of operation
+            if (check_UID_format(token))
+                strcpy(UID, token);
+            else {
+                printf("ERR: UID must be a 6-digit number\n");
+                continue;
+            }
+
+            char password[9];
+            token = strtok(NULL, " \n");
+
+            if (check_password_format(token))
+                strcpy(password, token);
+            else {
+                printf("ERR: Password must be composed of 8 alphanumeric characters\n");
+                continue;
+            }
+
+            char login_AS_command[20] = "LIN ";
+            strcat(login_AS_command, UID);
+            strcat(login_AS_command, " ");
+            strcat(login_AS_command, password);
+            strcat(login_AS_command, "\n");
+
+            n=sendto(UDP_fd,login_AS_command,20,0,res->ai_addr,res->ai_addrlen);
+            if(n==-1) /*error*/ exit(1);
+
+            addrlen=sizeof(addr);
+            n=recvfrom(UDP_fd,buffer,128,0,
+            (struct sockaddr*)&addr,&addrlen);
+            if(n==-1) /*error*/ exit(1);
+
+            if (strncmp(buffer, "RLI REG\n", 8) == 0) {
+                printf("new user registered\n");
+
+                logged_in = true;
+                UID_current = UID;
+                password_current = password;
+            }
+            else if (strncmp(buffer, "RLI OK\n", 7) == 0) {
+                printf("successful login\n");
+
+                logged_in = true;
+                UID_current = UID;
+                password_current = password;
+            }
+            else if (strncmp(buffer, "RLI NOK\n", 8) == 0) {
+                printf("incorrect login attempt\n");
+                continue;
+            }
+
         }
+
         else if (token != NULL && strcmp(token, "logout") == 0) {
             // sends to AS using UDP
             // Logs out currently logged in user
             // prints result of operation
 
-            printf("entered logout command\n");
+            if (!logged_in)
+                printf("ERR: must login first!\n");
+            
+            logged_in = false; // if the operation is successful
+
         }
         else if (token != NULL && strcmp(token, "unregister") == 0) {
             // sends to AS using UDP
             // asks to unregister currently logged in user. Should also be logged out
             // prints result of operation
 
-            printf("entered unregister command\n");
         }
+
         else if (token != NULL && strcmp(token, "exit") == 0) {
             // if user is logged in, asks to log out
             // if logged out, terminate the application
             // doesn't communicate with AS
 
-            printf("entered exit command\n");
-
-            if (logged_in == true)
+            if (logged_in == true) {
                 printf("You must log out before exiting!\n");
+                continue;
+            }
             else
                 break;
             
@@ -101,37 +169,37 @@ int main(int argc, char **argv) {
             // AS returns whether request was successful and the auction's AID
             // closes connection
             
-            printf("entered open command\n");
         }
         else if (token != NULL && strcmp(token, "close") == 0) {
             // sends to AS using TCP
             // asks to close auction with given AID that had been started by logged in user
             // AS returns result of operation
             // closes connection
+
         }
         else if (token != NULL && (strcmp(token, "myauctions") == 0 || strcmp(token, "ma") == 0)) {
-            printf("entered ma command\n");
+
         }
         else if (token != NULL && (strcmp(token, "mybids") == 0 || strcmp(token, "mb") == 0)) {
-            printf("entered mb command\n");
+
         }
         else if (token != NULL && (strcmp(token, "list") == 0 || strcmp(token, "l") == 0)) {
-            printf("entered l command\n");
+
         }
         else if (token != NULL && (strcmp(token, "show_asset") == 0 || strcmp(token, "sa") == 0)) {
-            printf("entered sa command\n");
+
         }
         else if (token != NULL && (strcmp(token, "bid") == 0 || strcmp(token, "b") == 0)) {
-            printf("entered b command\n");
+
         }
         else if (token != NULL && (strcmp(token, "show_record") == 0 || strcmp(token, "sr") == 0)) {
-            printf("entered sr command\n");
+
         } else
-            printf("entered invalid command\n");
+            printf("ERR: Invalid command\n");
     }
 
     freeaddrinfo(res);
-    close(fd);
+    close(UDP_fd);
 
     return 0;
 }
