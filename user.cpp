@@ -17,6 +17,7 @@ socklen_t addrlen;
 struct addrinfo hints,*res;
 struct sockaddr_in addr;
 char buffer[128];
+bool logged_in = false;
 
 bool check_UID_format(char* UID) {
     if (UID == NULL || strlen(UID) != 6)
@@ -40,9 +41,65 @@ bool check_password_format(char* password) {
     return true;
 }
 
+void logout_command(char* token) {
+    if (!logged_in) {
+        printf("ERR: must login first!\n");
+        return;
+    }
+
+    char UID[7];
+    token = strtok(NULL, " \n");
+
+    if (check_UID_format(token))
+        strcpy(UID, token);
+    else {
+        printf("ERR: UID must be a 6-digit number\n");
+        return;
+    }
+
+    char password[9];
+    token = strtok(NULL, " \n");
+
+    if (check_password_format(token))
+        strcpy(password, token);
+    else {
+        printf("ERR: Password must be composed of 8 alphanumeric characters\n");
+        return;
+    }
+
+    char AS_command[20] = "LOU ";
+
+    strcat(AS_command, UID);
+    strcat(AS_command, " ");
+    strcat(AS_command, password);
+    strcat(AS_command, "\n");
+
+    n=sendto(UDP_fd,AS_command,20,0,res->ai_addr,res->ai_addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    addrlen=sizeof(addr);
+    n=recvfrom(UDP_fd,buffer,128,0,
+    (struct sockaddr*)&addr,&addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    if (strncmp(buffer, "RLO OK\n", 7) == 0) {
+        printf("Successfully logged out\n");
+        logged_in = false;
+        return;
+    }
+    else if (strncmp(buffer, "RLO NOK\n", 8) == 0) {
+        printf("User was not logged out\n");
+        return;
+    }
+    else if (strncmp(buffer, "RLO UNR\n", 8) == 0) {
+        printf("User was not registered\n");
+        return;
+    }
+
+}
+
 int main(int argc, char **argv) {
 
-    bool logged_in = false;
     char *UID_current;
     char *password_current;
 
@@ -137,11 +194,7 @@ int main(int argc, char **argv) {
             // Logs out currently logged in user
             // prints result of operation
 
-            if (!logged_in)
-                printf("ERR: must login first!\n");
-            
-            logged_in = false; // if the operation is successful
-
+            logout_command(token);
         }
         else if (token != NULL && strcmp(token, "unregister") == 0) {
             // sends to AS using UDP
@@ -159,8 +212,10 @@ int main(int argc, char **argv) {
                 printf("You must log out before exiting!\n");
                 continue;
             }
-            else
+            else {
+                printf("Successfully exited\n");
                 break;
+            }
             
         }
         else if (token != NULL && strcmp(token, "open") == 0) {
