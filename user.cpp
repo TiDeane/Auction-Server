@@ -164,6 +164,59 @@ void logout_command(char* token) {
 
 }
 
+void unregister_command(char *token){
+
+    char UID[7];
+    token = strtok(NULL, " \n");
+
+    if (check_UID_format(token))
+        strcpy(UID, token);
+    else {
+        printf("ERR: UID must be a 6-digit number\n");
+        return;
+    }
+
+    char password[9];
+    token = strtok(NULL, " \n");
+
+    if (check_password_format(token))
+        strcpy(password, token);
+    else {
+        printf("ERR: Password must be composed of 8 alphanumeric characters\n");
+        return;
+    }
+
+    char UNR_Command[20]="UNR";
+    strcat(UNR_Command, UID);
+    strcat(UNR_Command, " ");
+    strcat(UNR_Command, password);
+    strcat(UNR_Command, "\n");
+
+    n=sendto(UDP_fd,UNR_Command,20,0,res->ai_addr,res->ai_addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    addrlen=sizeof(addr);
+    n=recvfrom(UDP_fd,buffer,128,0,
+    (struct sockaddr*)&addr,&addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    if(strcmp(buffer,"RUR OK")){
+        printf("ERR: successful unregister\n");
+        return;
+    }
+    if(strcmp(buffer,"RUR UNR")){
+        printf("ERR: unknown user\n");
+        return;
+    }
+    if(strcmp(buffer,"RUR NOK")){
+        printf("ERR: incorrect unregister attempt\n");
+        return;
+    }
+    
+
+}
+
+
 int main(int argc, char **argv) {
 
     /* Default IP and PORT values */
@@ -208,7 +261,7 @@ int main(int argc, char **argv) {
             // sends to AS using UDP
             // asks to unregister currently logged in user. Should also be logged out
             // prints result of operation
-
+            unregister_command(token);
         }
 
         else if (token != NULL && strcmp(token, "exit") == 0) {
