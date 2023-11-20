@@ -107,7 +107,7 @@ void login_command(char* token) {
     }
 }
 
-void logout_command(char* token) {
+void logout_command() {
     if (!logged_in) {
         printf("ERR: must login first!\n");
         return;
@@ -141,7 +141,10 @@ void logout_command(char* token) {
         printf("unknown user\n");
         return;
     }
+}
 
+void open_command(char* token) {
+    
 }
 
 int main(int argc, char **argv) {
@@ -180,7 +183,7 @@ int main(int argc, char **argv) {
 
         else if (token != NULL && strcmp(token, "logout") == 0) {
             // Logout command
-            logout_command(token);
+            logout_command();
         }
         else if (token != NULL && strcmp(token, "unregister") == 0) {
             // sends to AS using UDP
@@ -190,9 +193,7 @@ int main(int argc, char **argv) {
         }
 
         else if (token != NULL && strcmp(token, "exit") == 0) {
-            // if user is logged in, asks to log out
-            // if logged out, terminate the application
-            // doesn't communicate with AS
+            // Exit command
 
             if (logged_in == true) {
                 printf("ERR: must log out before exiting\n");
@@ -210,7 +211,7 @@ int main(int argc, char **argv) {
             // AS returns whether request was successful and the auction's AID
             // closes connection
             
-            //open_command(token);
+            open_command(token);
         }
         else if (token != NULL && strcmp(token, "close") == 0) {
             // sends to AS using TCP
