@@ -18,28 +18,36 @@ struct addrinfo hints,*res;
 struct sockaddr_in addr;
 char buffer[128];
 
-char *UID_current;
-char *password_current;
+char UID_current[7];
+char password_current[9];
 bool logged_in = false;
 
 bool check_UID_format(char* UID) {
-    if (UID == NULL || strlen(UID) != 6)
+    if (UID == NULL || strlen(UID) != 6) {
+        printf("ERR: UID must be a 6-digit number\n");
         return false;
+    }
     
     for (int i= 0; i < 6; i++)
-        if (!isdigit(UID[i]))
+        if (!isdigit(UID[i])) {
+            printf("ERR: UID must be a 6-digit number\n");
             return false;
+        }
     
     return true;
 }
 
 bool check_password_format(char* password) {
-    if (password == NULL || strlen(password) != 8)
+    if (password == NULL || strlen(password) != 8) {
+        printf("ERR: Password must be composed of 8 alphanumeric characters\n");
         return false;
+    }
     
     for (int i= 0; i < 8; i++)
-        if (!isalnum(password[i]))
+        if (!isalnum(password[i])) {
+            printf("ERR: Password must be composed of 8 alphanumeric characters\n");
             return false;
+        }
     
     return true;
 }
@@ -47,7 +55,7 @@ bool check_password_format(char* password) {
 void login_command(char* token) {
 
     if (logged_in) {
-        printf("User must log out first\n");
+        printf("ERR: must logout first\n");
         return;
     }
 
@@ -56,20 +64,12 @@ void login_command(char* token) {
 
     if (check_UID_format(token))
         strcpy(UID, token);
-    else {
-        printf("ERR: UID must be a 6-digit number\n");
-        return;
-    }
 
     char password[9];
     token = strtok(NULL, " \n");
 
     if (check_password_format(token))
         strcpy(password, token);
-    else {
-        printf("ERR: Password must be composed of 8 alphanumeric characters\n");
-        return;
-    }
 
     char AS_command[20] = "LIN ";
     strcat(AS_command, UID);
@@ -86,23 +86,23 @@ void login_command(char* token) {
     if(n==-1) /*error*/ exit(1);
 
     if (strncmp(buffer, "RLI REG\n", 8) == 0) {
-        printf("New user registered\n");
+        printf("new user registered\n");
 
         logged_in = true;
-        UID_current = UID;
-        password_current = password;
+        strcpy(UID_current, UID);
+        strcpy(password_current, password);
         return;
     }
     else if (strncmp(buffer, "RLI OK\n", 7) == 0) {
-        printf("Successful login\n");
+        printf("successful login\n");
 
         logged_in = true;
-        UID_current = UID;
-        password_current = password;
+        strcpy(UID_current, UID);
+        strcpy(password_current, password);
         return;
     }
     else if (strncmp(buffer, "RLI NOK\n", 8) == 0) {
-        printf("Incorrect login attempt\n");
+        printf("incorrect login attempt\n");
         return;
     }
 }
@@ -113,31 +113,11 @@ void logout_command(char* token) {
         return;
     }
 
-    char UID[7];
-    token = strtok(NULL, " \n");
-
-    if (check_UID_format(token))
-        strcpy(UID, token);
-    else {
-        printf("ERR: UID must be a 6-digit number\n");
-        return;
-    }
-
-    char password[9];
-    token = strtok(NULL, " \n");
-
-    if (check_password_format(token))
-        strcpy(password, token);
-    else {
-        printf("ERR: Password must be composed of 8 alphanumeric characters\n");
-        return;
-    }
-
     char AS_command[20] = "LOU ";
 
-    strcat(AS_command, UID);
+    strcat(AS_command, UID_current);
     strcat(AS_command, " ");
-    strcat(AS_command, password);
+    strcat(AS_command, password_current);
     strcat(AS_command, "\n");
 
     n=sendto(UDP_fd,AS_command,20,0,res->ai_addr,res->ai_addrlen);
@@ -149,16 +129,16 @@ void logout_command(char* token) {
     if(n==-1) /*error*/ exit(1);
 
     if (strncmp(buffer, "RLO OK\n", 7) == 0) {
-        printf("Successfully logged out\n");
+        printf("successful logout\n");
         logged_in = false;
         return;
     }
     else if (strncmp(buffer, "RLO NOK\n", 8) == 0) {
-        printf("User was not logged out\n");
+        printf("user not logged in\n");
         return;
     }
     else if (strncmp(buffer, "RLO UNR\n", 8) == 0) {
-        printf("User was not registered\n");
+        printf("unknown user\n");
         return;
     }
 
@@ -166,30 +146,15 @@ void logout_command(char* token) {
 
 void unregister_command(char *token){
 
-    char UID[7];
-    token = strtok(NULL, " \n");
-
-    if (check_UID_format(token))
-        strcpy(UID, token);
-    else {
-        printf("ERR: UID must be a 6-digit number\n");
-        return;
-    }
-
-    char password[9];
-    token = strtok(NULL, " \n");
-
-    if (check_password_format(token))
-        strcpy(password, token);
-    else {
-        printf("ERR: Password must be composed of 8 alphanumeric characters\n");
+    if(!logged_in){
+        printf("ERR: must login first\n");
         return;
     }
 
     char UNR_Command[20]="UNR";
-    strcat(UNR_Command, UID);
+    strcat(UNR_Command, UID_current);
     strcat(UNR_Command, " ");
-    strcat(UNR_Command, password);
+    strcat(UNR_Command, password_current);
     strcat(UNR_Command, "\n");
 
     n=sendto(UDP_fd,UNR_Command,20,0,res->ai_addr,res->ai_addrlen);
@@ -201,7 +166,8 @@ void unregister_command(char *token){
     if(n==-1) /*error*/ exit(1);
 
     if(strcmp(buffer,"RUR OK")){
-        printf("ERR: successful unregister\n");
+        logout_command(token);
+        printf("successful unregister\n");
         return;
     }
     if(strcmp(buffer,"RUR UNR")){
@@ -216,7 +182,6 @@ void unregister_command(char *token){
 
 }
 
-
 int main(int argc, char **argv) {
 
     /* Default IP and PORT values */
@@ -230,8 +195,6 @@ int main(int argc, char **argv) {
             else if (strcmp(argv[i], "-p") == 0)
                 ASport = argv[i+1]; // The Port follows after "-p"
         }
-    
-    printf("ASIP = %s, ASport = %s,\n", ASIP, ASport);
 
     UDP_fd=socket(AF_INET,SOCK_DGRAM,0); //UDP socket
     if(UDP_fd==-1) /*error*/ exit(1);
@@ -262,6 +225,7 @@ int main(int argc, char **argv) {
             // asks to unregister currently logged in user. Should also be logged out
             // prints result of operation
             unregister_command(token);
+
         }
 
         else if (token != NULL && strcmp(token, "exit") == 0) {
@@ -270,11 +234,11 @@ int main(int argc, char **argv) {
             // doesn't communicate with AS
 
             if (logged_in == true) {
-                printf("You must log out before exiting!\n");
+                printf("ERR: must log out before exiting\n");
                 continue;
             }
             else {
-                printf("Successfully exited\n");
+                printf("successfully exited\n");
                 break;
             }
             
@@ -285,6 +249,7 @@ int main(int argc, char **argv) {
             // AS returns whether request was successful and the auction's AID
             // closes connection
             
+            //open_command(token);
         }
         else if (token != NULL && strcmp(token, "close") == 0) {
             // sends to AS using TCP
