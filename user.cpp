@@ -17,6 +17,9 @@ socklen_t addrlen;
 struct addrinfo hints,*res;
 struct sockaddr_in addr;
 char buffer[128];
+
+char *UID_current;
+char *password_current;
 bool logged_in = false;
 
 bool check_UID_format(char* UID) {
@@ -39,6 +42,69 @@ bool check_password_format(char* password) {
             return false;
     
     return true;
+}
+
+void login_command(char* token) {
+
+    if (logged_in) {
+        printf("User must log out first\n");
+        return;
+    }
+
+    char UID[7];
+    token = strtok(NULL, " \n");
+
+    if (check_UID_format(token))
+        strcpy(UID, token);
+    else {
+        printf("ERR: UID must be a 6-digit number\n");
+        return;
+    }
+
+    char password[9];
+    token = strtok(NULL, " \n");
+
+    if (check_password_format(token))
+        strcpy(password, token);
+    else {
+        printf("ERR: Password must be composed of 8 alphanumeric characters\n");
+        return;
+    }
+
+    char AS_command[20] = "LIN ";
+    strcat(AS_command, UID);
+    strcat(AS_command, " ");
+    strcat(AS_command, password);
+    strcat(AS_command, "\n");
+
+    n=sendto(UDP_fd,AS_command,20,0,res->ai_addr,res->ai_addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    addrlen=sizeof(addr);
+    n=recvfrom(UDP_fd,buffer,128,0,
+    (struct sockaddr*)&addr,&addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    if (strncmp(buffer, "RLI REG\n", 8) == 0) {
+        printf("New user registered\n");
+
+        logged_in = true;
+        UID_current = UID;
+        password_current = password;
+        return;
+    }
+    else if (strncmp(buffer, "RLI OK\n", 7) == 0) {
+        printf("Successful login\n");
+
+        logged_in = true;
+        UID_current = UID;
+        password_current = password;
+        return;
+    }
+    else if (strncmp(buffer, "RLI NOK\n", 8) == 0) {
+        printf("Incorrect login attempt\n");
+        return;
+    }
 }
 
 void logout_command(char* token) {
@@ -100,9 +166,6 @@ void logout_command(char* token) {
 
 int main(int argc, char **argv) {
 
-    char *UID_current;
-    char *password_current;
-
     /* Default IP and PORT values */
     char* ASIP = (char*) "127.0.0.1";
     char* ASport = (char*) PORT;
@@ -133,67 +196,12 @@ int main(int argc, char **argv) {
         char *token = strtok(buffer, " \n"); // gets the first word
 
         if (token != NULL && strcmp(token, "login") == 0) { // Make it into function "parse_login()"?
-
-            char UID[7];
-            token = strtok(NULL, " \n");
-
-            if (check_UID_format(token))
-                strcpy(UID, token);
-            else {
-                printf("ERR: UID must be a 6-digit number\n");
-                continue;
-            }
-
-            char password[9];
-            token = strtok(NULL, " \n");
-
-            if (check_password_format(token))
-                strcpy(password, token);
-            else {
-                printf("ERR: Password must be composed of 8 alphanumeric characters\n");
-                continue;
-            }
-
-            char login_AS_command[20] = "LIN ";
-            strcat(login_AS_command, UID);
-            strcat(login_AS_command, " ");
-            strcat(login_AS_command, password);
-            strcat(login_AS_command, "\n");
-
-            n=sendto(UDP_fd,login_AS_command,20,0,res->ai_addr,res->ai_addrlen);
-            if(n==-1) /*error*/ exit(1);
-
-            addrlen=sizeof(addr);
-            n=recvfrom(UDP_fd,buffer,128,0,
-            (struct sockaddr*)&addr,&addrlen);
-            if(n==-1) /*error*/ exit(1);
-
-            if (strncmp(buffer, "RLI REG\n", 8) == 0) {
-                printf("new user registered\n");
-
-                logged_in = true;
-                UID_current = UID;
-                password_current = password;
-            }
-            else if (strncmp(buffer, "RLI OK\n", 7) == 0) {
-                printf("successful login\n");
-
-                logged_in = true;
-                UID_current = UID;
-                password_current = password;
-            }
-            else if (strncmp(buffer, "RLI NOK\n", 8) == 0) {
-                printf("incorrect login attempt\n");
-                continue;
-            }
-
+            // Login command
+            login_command(token);
         }
 
         else if (token != NULL && strcmp(token, "logout") == 0) {
-            // sends to AS using UDP
-            // Logs out currently logged in user
-            // prints result of operation
-
+            // Logout command
             logout_command(token);
         }
         else if (token != NULL && strcmp(token, "unregister") == 0) {
