@@ -143,6 +143,42 @@ void logout_command() {
     }
 }
 
+void unregister_command(){
+
+    if(!logged_in){
+        printf("ERR: must login first\n");
+        return;
+    }
+
+    char UNR_Command[20]="UNR ";
+    strcat(UNR_Command, UID_current);
+    strcat(UNR_Command, " ");
+    strcat(UNR_Command, password_current);
+    strcat(UNR_Command, "\n");
+
+    n=sendto(UDP_fd,UNR_Command,20,0,res->ai_addr,res->ai_addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    addrlen=sizeof(addr);
+    n=recvfrom(UDP_fd,buffer,128,0,
+    (struct sockaddr*)&addr,&addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    if(strcmp(buffer,"RUR OK")){
+        logged_in = false;
+        printf("successful unregister\n");
+        return;
+    }
+    if(strcmp(buffer,"RUR UNR")){
+        printf("unknown user\n");
+        return;
+    }
+    if(strcmp(buffer,"RUR NOK")){
+        printf("incorrect unregister attempt\n");
+        return;
+    }
+}
+
 void open_command(char* token) {
     
 }
@@ -186,10 +222,8 @@ int main(int argc, char **argv) {
             logout_command();
         }
         else if (token != NULL && strcmp(token, "unregister") == 0) {
-            // sends to AS using UDP
-            // asks to unregister currently logged in user. Should also be logged out
-            // prints result of operation
-
+            // Unregister command
+            unregister_command();
         }
 
         else if (token != NULL && strcmp(token, "exit") == 0) {
