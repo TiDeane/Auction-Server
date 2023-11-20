@@ -23,23 +23,31 @@ char *password_current;
 bool logged_in = false;
 
 bool check_UID_format(char* UID) {
-    if (UID == NULL || strlen(UID) != 6)
+    if (UID == NULL || strlen(UID) != 6) {
+        printf("ERR: UID must be a 6-digit number\n");
         return false;
+    }
     
     for (int i= 0; i < 6; i++)
-        if (!isdigit(UID[i]))
+        if (!isdigit(UID[i])) {
+            printf("ERR: UID must be a 6-digit number\n");
             return false;
+        }
     
     return true;
 }
 
 bool check_password_format(char* password) {
-    if (password == NULL || strlen(password) != 8)
+    if (password == NULL || strlen(password) != 8) {
+        printf("ERR: Password must be composed of 8 alphanumeric characters\n");
         return false;
+    }
     
     for (int i= 0; i < 8; i++)
-        if (!isalnum(password[i]))
+        if (!isalnum(password[i])) {
+            printf("ERR: Password must be composed of 8 alphanumeric characters\n");
             return false;
+        }
     
     return true;
 }
@@ -56,20 +64,12 @@ void login_command(char* token) {
 
     if (check_UID_format(token))
         strcpy(UID, token);
-    else {
-        printf("ERR: UID must be a 6-digit number\n");
-        return;
-    }
 
     char password[9];
     token = strtok(NULL, " \n");
 
     if (check_password_format(token))
         strcpy(password, token);
-    else {
-        printf("ERR: Password must be composed of 8 alphanumeric characters\n");
-        return;
-    }
 
     char AS_command[20] = "LIN ";
     strcat(AS_command, UID);
@@ -118,20 +118,12 @@ void logout_command(char* token) {
 
     if (check_UID_format(token))
         strcpy(UID, token);
-    else {
-        printf("ERR: UID must be a 6-digit number\n");
-        return;
-    }
 
     char password[9];
     token = strtok(NULL, " \n");
 
     if (check_password_format(token))
         strcpy(password, token);
-    else {
-        printf("ERR: Password must be composed of 8 alphanumeric characters\n");
-        return;
-    }
 
     char AS_command[20] = "LOU ";
 
@@ -177,9 +169,7 @@ int main(int argc, char **argv) {
             else if (strcmp(argv[i], "-p") == 0)
                 ASport = argv[i+1]; // The Port follows after "-p"
         }
-    
-    printf("ASIP = %s, ASport = %s,\n", ASIP, ASport);
-
+        
     UDP_fd=socket(AF_INET,SOCK_DGRAM,0); //UDP socket
     if(UDP_fd==-1) /*error*/ exit(1);
 
