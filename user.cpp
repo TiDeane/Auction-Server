@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/sendfile.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -11,12 +13,20 @@
 
 #define PORT "58011"
 
+#define BUFSIZE 2048
+
 int UDP_fd,TCP_fd,errcode;
 ssize_t n;
 socklen_t addrlen;
 struct addrinfo hints,*res;
 struct sockaddr_in addr;
-char buffer[128];
+struct addrinfo TCP_hints,*TCP_res;
+struct sockaddr_in TCP_addr;
+char buffer[BUFSIZE];
+
+/* Default IP and PORT values */
+char* ASIP = (char*) "127.0.0.1";
+char* ASport = (char*) PORT;
 
 char UID_current[7];
 char password_current[9];
@@ -55,7 +65,7 @@ bool check_password_format(char* password) {
 void login_command(char* token) {
 
     if (logged_in) {
-        printf("ERR: must logout first\n");
+        printf("ERR: user must be logged out\n");
         return;
     }
 
@@ -71,17 +81,14 @@ void login_command(char* token) {
     if (check_password_format(token))
         strcpy(password, token);
 
-    char AS_command[20] = "LIN ";
-    strcat(AS_command, UID);
-    strcat(AS_command, " ");
-    strcat(AS_command, password);
-    strcat(AS_command, "\n");
+    char LIN_command[21]; // Use buffer?
+    snprintf(LIN_command, sizeof(LIN_command), "LIN %s %s\n", UID, password);
 
-    n=sendto(UDP_fd,AS_command,20,0,res->ai_addr,res->ai_addrlen);
+    n=sendto(UDP_fd,LIN_command,20,0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(UDP_fd,buffer,128,0,
+    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
     (struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
 
@@ -109,22 +116,18 @@ void login_command(char* token) {
 
 void logout_command() {
     if (!logged_in) {
-        printf("ERR: must login first!\n");
+        printf("ERR: user must be logged in\n");
         return;
     }
 
-    char AS_command[20] = "LOU ";
+    char LOU_command[21]; // Use buffer?
+    snprintf(LOU_command, sizeof(LOU_command), "LOU %s %s\n", UID_current, password_current);
 
-    strcat(AS_command, UID_current);
-    strcat(AS_command, " ");
-    strcat(AS_command, password_current);
-    strcat(AS_command, "\n");
-
-    n=sendto(UDP_fd,AS_command,20,0,res->ai_addr,res->ai_addrlen);
+    n=sendto(UDP_fd,LOU_command,20,0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(UDP_fd,buffer,128,0,
+    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
     (struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
 
@@ -146,48 +149,139 @@ void logout_command() {
 void unregister_command(){
 
     if(!logged_in){
-        printf("ERR: must login first\n");
+        printf("ERR: user must be logged in\n");
         return;
     }
 
-    char UNR_Command[20]="UNR ";
-    strcat(UNR_Command, UID_current);
-    strcat(UNR_Command, " ");
-    strcat(UNR_Command, password_current);
-    strcat(UNR_Command, "\n");
+    char UNR_Command[21]; // Use buffer?
+    snprintf(UNR_Command, sizeof(UNR_Command), "UNR %s %s\n", UID_current, password_current);
 
     n=sendto(UDP_fd,UNR_Command,20,0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(UDP_fd,buffer,128,0,
+    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
     (struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
 
-    if(strcmp(buffer,"RUR OK")){
+    if(strncmp(buffer,"RUR OK\n", 7) == 0){
         logged_in = false;
         printf("successful unregister\n");
         return;
     }
-    if(strcmp(buffer,"RUR UNR")){
+    else if(strncmp(buffer,"RUR UNR\n", 8) == 0){
         printf("unknown user\n");
         return;
     }
-    if(strcmp(buffer,"RUR NOK")){
+    else if(strncmp(buffer,"RUR NOK\n", 8) == 0){
         printf("incorrect unregister attempt\n");
         return;
     }
 }
 
 void open_command(char* token) {
+
+    if (!logged_in) {
+        printf("ERR: user must be logged in\n");
+        return;
+    }
     
+    char name[47]; // One word
+    if ((token = strtok(NULL, " \n")) != NULL)
+        strcpy(name, token);
+
+    char asset_fname[25]; // Check if it's 24 alphanumerical plus '-', '_' and '.' characters
+    if ((token = strtok(NULL, " \n")) != NULL)
+        strcpy(asset_fname, token);
+
+    char start_value[11];
+    if ((token = strtok(NULL, " \n")) != NULL)
+        strcpy(start_value, token);
+
+    char timeactive[11];
+    if ((token = strtok(NULL, " \n")) != NULL)
+        strcpy(timeactive, token);
+
+    FILE *file = fopen(asset_fname, "rb");
+    if (file == NULL) {
+        perror("Error opening the file");
+        return;
+    }
+    
+    // Get file size using fstat
+    struct stat file_info;
+    if (fstat(fileno(file), &file_info) != 0) {
+        fclose(file);
+        perror("Error getting file information");
+        return;
+    }
+    long Fsize = file_info.st_size;
+    
+    if (Fsize > 99999999) {
+        printf("File size is too large\n");
+        fclose(file);
+        return;
+    }
+
+    int command_length = snprintf(buffer, sizeof(buffer), "OPA %s %s %s %s %s %s %ld ",
+                                  UID_current, password_current, name, start_value, timeactive,
+                                  asset_fname, Fsize);
+
+    TCP_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
+    if (TCP_fd==-1) exit(1); //error
+
+    memset(&TCP_hints,0,sizeof TCP_hints);
+    TCP_hints.ai_family=AF_INET; //IPv4
+    TCP_hints.ai_socktype=SOCK_STREAM; //TCP socket
+
+    errcode=getaddrinfo(ASIP,ASport,&TCP_hints,&TCP_res);
+    if(errcode!=0)/*error*/exit(1);
+
+    n=connect(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen);
+    if(n==-1)/*error*/exit(1);
+
+    n=write(TCP_fd,buffer,command_length); // TODO: Do multiple writes to guarantee
+    if(n==-1)/*error*/exit(1);
+
+    int file_fd = fileno(file);
+    off_t offset = 0;
+    off_t remaining = Fsize;
+    while (remaining > 0) {
+        ssize_t sent_bytes = sendfile(TCP_fd, file_fd, &offset, remaining);
+        if (sent_bytes == -1) {
+            perror("Error sending file content");
+            fclose(file);
+            return;
+        }
+        remaining -= sent_bytes;
+    }
+
+    n=read(TCP_fd,buffer,512); // Read multiple times?
+    if(n==-1)/*error*/exit(1);
+
+    fclose(file);
+    freeaddrinfo(TCP_res);
+    close(TCP_fd);
+
+    char status[4];
+    int AID;
+    sscanf(buffer, "ROA %s %d", status, &AID);
+    
+    if (strcmp(status, "OK") == 0) {
+        printf("Auction [%d] successfully created\n", AID);
+        return;
+    }
+    else if (strcmp(status, "NOK") == 0) {
+        printf("Auction could not be started\n");
+        return;
+    }
+    else if (strcmp(status, "NLG") == 0) {
+        printf("User was not logged into the server\n");
+        return;
+    }
 }
 
 int main(int argc, char **argv) {
-
-    /* Default IP and PORT values */
-    char* ASIP = (char*) "127.0.0.1";
-    char* ASport = (char*) PORT;
 
     if (argc >= 2) /* At least one argument */
         for (int i = 1; i < argc; i += 2) {
@@ -209,10 +303,10 @@ int main(int argc, char **argv) {
 
     while(1) {
         
-        fgets(buffer, 128, stdin);
+        fgets(buffer, BUFSIZE, stdin);
         char *token = strtok(buffer, " \n"); // gets the first word
 
-        if (token != NULL && strcmp(token, "login") == 0) { // Make it into function "parse_login()"?
+        if (token != NULL && strcmp(token, "login") == 0) {
             // Login command
             login_command(token);
         }
@@ -230,7 +324,7 @@ int main(int argc, char **argv) {
             // Exit command
 
             if (logged_in == true) {
-                printf("ERR: must log out before exiting\n");
+                printf("ERR: user must logout before exiting\n");
                 continue;
             }
             else {
@@ -240,11 +334,7 @@ int main(int argc, char **argv) {
             
         }
         else if (token != NULL && strcmp(token, "open") == 0) {
-            // establishes TCP connection
-            // sends message asking to open new auction (with auction's info)
-            // AS returns whether request was successful and the auction's AID
-            // closes connection
-            
+            // Open command
             open_command(token);
         }
         else if (token != NULL && strcmp(token, "close") == 0) {
@@ -280,18 +370,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-
-/*
-UDP Protocol:
-
-n=sendto(fd,"Hello!\n",7,0,res->ai_addr,res->ai_addrlen);
-    if(n==-1) error exit(1);
-
-
-    addrlen=sizeof(addr);
-    n=recvfrom(fd,buffer,128,0,
-    (struct sockaddr*)&addr,&addrlen);
-    if(n==-1) error exit(1);
-
-    write(1,"echo: ",6); write(1,buffer,n); 
-*/
