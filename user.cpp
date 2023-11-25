@@ -315,19 +315,19 @@ void close_command(char* token) {
         printf("Auction was successfully closed\n");
         return;
     }
-    else if(strncmp(buffer,"RUR EAU\n", 8) == 0){
+    else if(strncmp(buffer,"RCL EAU\n", 8) == 0){
         printf("The auction EAU does not exist\n");
         return;
     }
-    else if(strncmp(buffer,"RUR EOW\n", 8) == 0){
+    else if(strncmp(buffer,"RCL EOW\n", 8) == 0){
         printf("You do not own this auction\n");
         return;
     }
-    else if(strncmp(buffer,"RUR END\n", 8) == 0){
+    else if(strncmp(buffer,"RCL END\n", 8) == 0){
         printf("The auction has already finished\n");
         return;
     }
-    else if(strncmp(buffer,"RUR NLG\n", 8) == 0){
+    else if(strncmp(buffer,"RCL NLG\n", 8) == 0){
         printf("User was not logged into the Auction Server\n");
         return;
     }
