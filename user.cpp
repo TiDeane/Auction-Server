@@ -333,6 +333,27 @@ void close_command(char* token) {
     }
 }
 
+void list_command() {
+
+    char LST_command[] = "LST\n";
+    n=sendto(UDP_fd,LST_command,4,0,res->ai_addr,res->ai_addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    addrlen=sizeof(addr);
+    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
+    (struct sockaddr*)&addr,&addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    if(strncmp(buffer,"RLS OK", 6) == 0){
+        printf("List of auctions:\n%s\n", buffer + 7); // Pôr cada par "AID state" entre parenteses retos?
+        return;
+    }
+    else if(strncmp(buffer,"RLS NOK", 7) == 0){
+        printf("No auctions have been started\n");
+        return;
+    }
+}
+
 int main(int argc, char **argv) {
 
     if (argc >= 2) /* At least one argument */
@@ -396,7 +417,8 @@ int main(int argc, char **argv) {
 
         }
         else if (token != NULL && (strcmp(token, "list") == 0 || strcmp(token, "l") == 0)) {
-
+            // List command
+            list_command();
         }
         else if (token != NULL && (strcmp(token, "show_asset") == 0 || strcmp(token, "sa") == 0)) {
 
