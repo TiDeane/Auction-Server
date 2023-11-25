@@ -342,10 +342,39 @@ void close_command(char* token) {
     }
 }
 
+void myauctions_command(char *token){
+    if(!logged_in){
+        printf("ERR: must login first\n");
+        return;
+    }
+    char LMA_Command[20]="LMA ";
+    int command_length = snprintf(LMA_Command, sizeof(LMA_Command), "LMA %s\n", UID_current);
+    n=sendto(UDP_fd,LMA_Command,command_length,0,res->ai_addr,res->ai_addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    addrlen=sizeof(addr);
+    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
+    (struct sockaddr*)&addr,&addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    if(strncmp(buffer,"RMA OK",6)==0){
+        printf("My auctions: %s", buffer + 7);
+        return;
+    }
+    else if(strncmp(buffer,"RMA NLG",7)==0){
+        printf("user not logged in!\n");
+        return;
+    }
+    else if(strncmp(buffer,"RMA NOK",7)==0){
+        printf("user has no active auction bids\n");
+        return;
+    }
+}
+
 void list_command() {
 
     char LST_command[] = "LST\n";
-    n=sendto(UDP_fd,LST_command,4,0,res->ai_addr,res->ai_addrlen);
+    n=sendto(UDP_fd,LST_command,strlen(LST_command),0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
@@ -424,7 +453,8 @@ int main(int argc, char **argv) {
             close_command(token);
         }
         else if (token != NULL && (strcmp(token, "myauctions") == 0 || strcmp(token, "ma") == 0)) {
-
+            // My Auctions command
+            myauctions_command(token);
         }
         else if (token != NULL && (strcmp(token, "mybids") == 0 || strcmp(token, "mb") == 0)) {
 
