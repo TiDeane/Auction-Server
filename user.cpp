@@ -171,15 +171,43 @@ void unregister_command(char *token){
         return;
     }
     if(strcmp(buffer,"RUR UNR")){
-        printf("ERR: unknown user\n");
+        printf("unknown user\n");
         return;
     }
     if(strcmp(buffer,"RUR NOK")){
-        printf("ERR: incorrect unregister attempt\n");
+        printf("incorrect unregister attempt\n");
         return;
     }
     
 
+}
+
+void myactions_command(char *token){
+    if(!logged_in){
+        printf("ERR: must login first\n");
+        return;
+    }
+    char LMA_Command[20]="LMA ";
+    strcat(LMA_Command, UID_current);
+    strcat(LMA_Command, "\n");
+    n=sendto(UDP_fd,LMA_Command,strlen(LMA_Command),0,res->ai_addr,res->ai_addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    addrlen=sizeof(addr);
+    n=recvfrom(UDP_fd,buffer,128,0,
+    (struct sockaddr*)&addr,&addrlen);
+    if(n==-1) /*error*/ exit(1);
+    if(strncmp(buffer,"RMA OK",6)==0){
+        return;
+    }
+    else if(strncmp(buffer,"RMA NLG",7)==0){
+        printf("user not logged in!\n");
+        return;
+    }
+    else if(strncmp(buffer,"RMA NOK",7)==0){
+        printf("user has no active auction bids\n");
+        return;
+    }
 }
 
 int main(int argc, char **argv) {
@@ -259,7 +287,7 @@ int main(int argc, char **argv) {
 
         }
         else if (token != NULL && (strcmp(token, "myauctions") == 0 || strcmp(token, "ma") == 0)) {
-
+            myactions_command(token);
         }
         else if (token != NULL && (strcmp(token, "mybids") == 0 || strcmp(token, "mb") == 0)) {
 
