@@ -186,7 +186,7 @@ void open_command(char* token) {
         return;
     }
     
-    char name[47]; // One word
+    char name[11]; // 10 alphanumeric characters
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(name, token);
 
@@ -194,11 +194,11 @@ void open_command(char* token) {
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(asset_fname, token);
 
-    char start_value[11];
+    char start_value[7]; // Up to 6 digits
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(start_value, token);
 
-    char timeactive[11];
+    char timeactive[6]; // Up to 5 digits
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(timeactive, token);
 
@@ -281,6 +281,58 @@ void open_command(char* token) {
     }
 }
 
+void close_command(char* token) {
+    char AID[4]; // AID is a 3 digit number
+    if ((token = strtok(NULL, " \n")) != NULL)
+        strcpy(AID, token);
+
+    char CLS_command[25];
+    snprintf(CLS_command, sizeof(CLS_command), "CLS %s %s %s\n", UID_current, password_current, AID);
+
+    TCP_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
+    if (TCP_fd==-1) exit(1); //error
+
+    memset(&TCP_hints,0,sizeof TCP_hints);
+    TCP_hints.ai_family=AF_INET; //IPv4
+    TCP_hints.ai_socktype=SOCK_STREAM; //TCP socket
+
+    errcode=getaddrinfo(ASIP,ASport,&TCP_hints,&TCP_res);
+    if(errcode!=0)/*error*/exit(1);
+
+    n=connect(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen);
+    if(n==-1)/*error*/exit(1);
+
+    n=write(TCP_fd,CLS_command,24); // TODO: Do multiple writes to guarantee
+    if(n==-1)/*error*/exit(1);
+
+    n=read(TCP_fd,buffer,512); // Read multiple times?
+    if(n==-1)/*error*/exit(1);
+
+    freeaddrinfo(TCP_res);
+    close(TCP_fd);
+
+    if(strncmp(buffer,"RCL OK\n", 7) == 0){
+        printf("Auction was successfully closed\n");
+        return;
+    }
+    else if(strncmp(buffer,"RUR EAU\n", 8) == 0){
+        printf("The auction EAU does not exist\n");
+        return;
+    }
+    else if(strncmp(buffer,"RUR EOW\n", 8) == 0){
+        printf("You do not own this auction\n");
+        return;
+    }
+    else if(strncmp(buffer,"RUR END\n", 8) == 0){
+        printf("The auction has already finished\n");
+        return;
+    }
+    else if(strncmp(buffer,"RUR NLG\n", 8) == 0){
+        printf("User was not logged into the Auction Server\n");
+        return;
+    }
+}
+
 int main(int argc, char **argv) {
 
     if (argc >= 2) /* At least one argument */
@@ -310,7 +362,6 @@ int main(int argc, char **argv) {
             // Login command
             login_command(token);
         }
-
         else if (token != NULL && strcmp(token, "logout") == 0) {
             // Logout command
             logout_command();
@@ -319,10 +370,8 @@ int main(int argc, char **argv) {
             // Unregister command
             unregister_command();
         }
-
         else if (token != NULL && strcmp(token, "exit") == 0) {
             // Exit command
-
             if (logged_in == true) {
                 printf("ERR: user must logout before exiting\n");
                 continue;
@@ -331,18 +380,14 @@ int main(int argc, char **argv) {
                 printf("successfully exited\n");
                 break;
             }
-            
         }
         else if (token != NULL && strcmp(token, "open") == 0) {
             // Open command
             open_command(token);
         }
         else if (token != NULL && strcmp(token, "close") == 0) {
-            // sends to AS using TCP
-            // asks to close auction with given AID that had been started by logged in user
-            // AS returns result of operation
-            // closes connection
-
+            // Close command
+            close_command(token);
         }
         else if (token != NULL && (strcmp(token, "myauctions") == 0 || strcmp(token, "ma") == 0)) {
 
