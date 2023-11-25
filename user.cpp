@@ -65,7 +65,7 @@ bool check_password_format(char* password) {
 void login_command(char* token) {
 
     if (logged_in) {
-        printf("ERR: user must be logged out\n");
+        printf("ERR: user is already logged in\n");
         return;
     }
 
@@ -210,7 +210,8 @@ void open_command(char* token) {
     
     // Get file size using fstat
     struct stat file_info;
-    if (fstat(fileno(file), &file_info) != 0) {
+    int file_fd = fileno(file);
+    if (fstat(file_fd, &file_info) != 0) {
         fclose(file);
         perror("Error getting file information");
         return;
@@ -243,20 +244,19 @@ void open_command(char* token) {
     n=write(TCP_fd,buffer,command_length); // TODO: Do multiple writes to guarantee
     if(n==-1)/*error*/exit(1);
 
-    int file_fd = fileno(file);
     off_t offset = 0;
-    off_t remaining = Fsize;
-    while (remaining > 0) {
-        ssize_t sent_bytes = sendfile(TCP_fd, file_fd, &offset, remaining);
-        if (sent_bytes == -1) {
+    ssize_t bytes_sent;
+    while (offset < Fsize) {
+        bytes_sent = sendfile(TCP_fd, file_fd, &offset, Fsize - offset);
+        if (bytes_sent == -1) {
             perror("Error sending file content");
             fclose(file);
+            close(TCP_fd);
             return;
         }
-        remaining -= sent_bytes;
     }
 
-    n=read(TCP_fd,buffer,512); // Read multiple times?
+    n=read(TCP_fd,buffer,BUFSIZE); // Read multiple times?
     if(n==-1)/*error*/exit(1);
 
     fclose(file);
@@ -265,7 +265,7 @@ void open_command(char* token) {
 
     char status[4];
     int AID;
-    sscanf(buffer, "ROA %s %d", status, &AID);
+    sscanf(buffer, "ROA %s %d\n", status, &AID);
     
     if (strcmp(status, "OK") == 0) {
         printf("Auction [%d] successfully created\n", AID);
@@ -282,9 +282,18 @@ void open_command(char* token) {
 }
 
 void close_command(char* token) {
+    if (!logged_in) {
+        printf("User must be logged in\n");
+        return;
+    }
+
     char AID[4]; // AID is a 3 digit number
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(AID, token);
+    else {
+        printf("AID argument missing\n");
+        return;
+    }
 
     char CLS_command[25];
     snprintf(CLS_command, sizeof(CLS_command), "CLS %s %s %s\n", UID_current, password_current, AID);
@@ -354,6 +363,10 @@ void list_command() {
     }
 }
 
+void sas_command(char* token) {
+
+}
+
 int main(int argc, char **argv) {
 
     if (argc >= 2) /* At least one argument */
@@ -394,10 +407,10 @@ int main(int argc, char **argv) {
         else if (token != NULL && strcmp(token, "exit") == 0) {
             // Exit command
             if (logged_in == true) {
-                printf("ERR: user must logout before exiting\n");
-                continue;
-            }
-            else {
+                logout_command();
+                printf("successfully exited\n");
+                break;
+            } else {
                 printf("successfully exited\n");
                 break;
             }
@@ -421,14 +434,15 @@ int main(int argc, char **argv) {
             list_command();
         }
         else if (token != NULL && (strcmp(token, "show_asset") == 0 || strcmp(token, "sa") == 0)) {
-
+            sas_command(token);
         }
         else if (token != NULL && (strcmp(token, "bid") == 0 || strcmp(token, "b") == 0)) {
 
         }
         else if (token != NULL && (strcmp(token, "show_record") == 0 || strcmp(token, "sr") == 0)) {
 
-        } else
+        }
+        else
             printf("ERR: Invalid command\n");
     }
 
