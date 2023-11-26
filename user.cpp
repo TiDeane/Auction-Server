@@ -14,6 +14,7 @@
 #define PORT "58011"
 
 #define BUFSIZE 2048
+#define MAX_FILENAME 24
 
 int UDP_fd,TCP_fd,errcode;
 ssize_t n;
@@ -190,7 +191,7 @@ void open_command(char* token) {
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(name, token);
 
-    char asset_fname[25]; // Check if it's 24 alphanumerical plus '-', '_' and '.' characters
+    char asset_fname[MAX_FILENAME+1]; // Check if it's 24 alphanumerical plus '-', '_' and '.' characters
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(asset_fname, token);
 
@@ -393,7 +394,86 @@ void list_command() {
 }
 
 void sas_command(char* token) {
+    char AID[4]; // AID is a 3 digit number
+    if ((token = strtok(NULL, " \n")) != NULL)
+        strcpy(AID, token);
 
+    char SAS_command[9];
+    snprintf(SAS_command, sizeof(SAS_command), "SAS %s\n", AID);
+    
+    TCP_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
+    if (TCP_fd==-1) exit(1); //error
+
+    memset(&TCP_hints,0,sizeof TCP_hints);
+    TCP_hints.ai_family=AF_INET; //IPv4
+    TCP_hints.ai_socktype=SOCK_STREAM; //TCP socket
+
+    errcode=getaddrinfo(ASIP,ASport,&TCP_hints,&TCP_res);
+    if(errcode!=0)/*error*/exit(1);
+
+    n=connect(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen);
+    if(n==-1)/*error*/exit(1);
+
+    n=write(TCP_fd,SAS_command,8); // TODO: Do multiple writes to guarantee
+    if(n==-1)/*error*/exit(1);
+
+    n=read(TCP_fd,buffer,BUFSIZE); // Reads the command and status
+    if(n==-1)/*error*/exit(1);
+
+    char status[4];
+    sscanf(buffer, "RSA %3s", status);
+
+    if (strcmp(status, "NOK") == 0) {
+        printf("There is no file to be sent, or a problem ocurred\n");
+        close(TCP_fd);
+        return;
+    }
+    else if (strcmp(status, "OK") == 0) {
+        char fname[MAX_FILENAME+1], *ptr;
+        long fsize;
+        ssize_t nbytes,nleft,nwritten,nread;
+
+        nread = read(TCP_fd,buffer,BUFSIZE); // Reads file name, size and data
+        if (nread == -1)/*error*/exit(1);
+
+        char write_buffer[BUFSIZE];
+        sscanf(buffer, "%s %ld %s", fname, &fsize, write_buffer);
+
+        // aumentar o pointer para o inicio da data para escrever, ao inves de usar
+        // o write buffer?
+
+        FILE *file = fopen(fname, "wb");
+        if (file == NULL) {
+            perror("Error opening the file");
+            close(TCP_fd);
+            return;
+        }
+
+        nwritten = fwrite(write_buffer, 1, fsize, file);
+
+        nleft = fsize - nwritten;
+        ptr = buffer;
+        while (nleft > 0){
+            nread = read(TCP_fd, ptr, nleft);
+            if (nread == -1) /*error*/ return;
+            else if (nread == 0)
+                break;//closed by peer
+
+            fwrite(ptr, 1, nread, file);
+
+            nleft -= nread;
+            ptr += nread;
+        }
+
+        fclose(file);
+        freeaddrinfo(TCP_res);
+        close(TCP_fd);
+
+        getcwd(write_buffer, sizeof(write_buffer));
+        printf("File [%s] of size [%ldB] stored at %s\n", fname,fsize,write_buffer);
+
+        return;
+    }
 }
 
 int main(int argc, char **argv) {
