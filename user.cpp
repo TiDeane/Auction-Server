@@ -343,11 +343,12 @@ void close_command(char* token) {
     }
 }
 
-void myauctions_command(char *token){
+void myauctions_command(){
     if(!logged_in){
         printf("ERR: must login first\n");
         return;
     }
+
     char LMA_Command[20]="LMA ";
     int command_length = snprintf(LMA_Command, sizeof(LMA_Command), "LMA %s\n", UID_current);
     n=sendto(UDP_fd,LMA_Command,command_length,0,res->ai_addr,res->ai_addrlen);
@@ -367,7 +368,36 @@ void myauctions_command(char *token){
         return;
     }
     else if(strncmp(buffer,"RMA NOK",7)==0){
-        printf("user has no active auction bids\n");
+        printf("user has no ongoing auctions\n");
+        return;
+    }
+}
+
+void mybids_command(){
+    if(!logged_in){
+        printf("ERR: must login first\n");
+        return;
+    }
+    char LMB_Command[11]="LMB ";
+    int command_length = snprintf(LMB_Command, sizeof(LMB_Command), "LMB %s\n", UID_current);
+    n=sendto(UDP_fd,LMB_Command,command_length,0,res->ai_addr,res->ai_addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    addrlen=sizeof(addr);
+    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
+    (struct sockaddr*)&addr,&addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    if(strncmp(buffer,"RMB OK",6)==0){
+        printf("My bids: %s", buffer + 7);
+        return;
+    }
+    else if(strncmp(buffer,"RMB NLG",7)==0){
+        printf("user not logged in!\n");
+        return;
+    }
+    else if(strncmp(buffer,"RMB NOK",7)==0){
+        printf("user has no ongoing bids\n");
         return;
     }
 }
@@ -394,6 +424,7 @@ void list_command() {
 }
 
 void sas_command(char* token) {
+
     char AID[4]; // AID is a 3 digit number
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(AID, token);
@@ -433,14 +464,18 @@ void sas_command(char* token) {
         long fsize;
         ssize_t nbytes,nleft,nwritten,nread;
 
+        bzero(buffer, BUFSIZE);
+
         nread = read(TCP_fd,buffer,BUFSIZE); // Reads file name, size and data
         if (nread == -1)/*error*/exit(1);
 
-        char write_buffer[BUFSIZE];
-        sscanf(buffer, "%s %ld %s", fname, &fsize, write_buffer);
+        ptr = buffer;
+        
+        sscanf(buffer, "%s %ld ", fname, &fsize); // TODO: VERIFY IF RESPONSE FORMAT IS CORRECT
 
-        // aumentar o pointer para o inicio da data para escrever, ao inves de usar
-        // o write buffer?
+        int fsize_len = snprintf(NULL, 0, "%ld", fsize);
+        int fname_len = strlen(fname);
+        ptr += fname_len + fsize_len + 2; // Points to start of data
 
         FILE *file = fopen(fname, "wb");
         if (file == NULL) {
@@ -449,28 +484,40 @@ void sas_command(char* token) {
             return;
         }
 
-        nwritten = fwrite(write_buffer, 1, fsize, file);
+        ssize_t data_received;
+
+        if (fsize > (nread - fname_len - fsize_len - 2))
+            data_received = nread - fname_len - fsize_len - 2;
+        else
+            data_received = fsize;
+
+        nwritten = fwrite(ptr, 1, data_received, file);
 
         nleft = fsize - nwritten;
-        ptr = buffer;
+
         while (nleft > 0){
-            nread = read(TCP_fd, ptr, nleft);
+            bzero(buffer, BUFSIZE); // Nulls the buffer for reading
+
+            if (nleft > BUFSIZE)
+                nread = read(TCP_fd, buffer, BUFSIZE);
+            else
+                nread = read(TCP_fd, buffer, nleft);
+
             if (nread == -1) /*error*/ return;
             else if (nread == 0)
                 break;//closed by peer
 
-            fwrite(ptr, 1, nread, file);
+            nwritten += fwrite(buffer, 1, nread, file);
 
             nleft -= nread;
-            ptr += nread;
         }
 
         fclose(file);
         freeaddrinfo(TCP_res);
         close(TCP_fd);
 
-        getcwd(write_buffer, sizeof(write_buffer));
-        printf("File [%s] of size [%ldB] stored at %s\n", fname,fsize,write_buffer);
+        getcwd(buffer, sizeof(buffer)); // Recycles the data_buffer
+        printf("File [%s] of size [%ldB] stored at %s\n", fname,fsize,buffer);
 
         return;
     }
@@ -534,20 +581,22 @@ int main(int argc, char **argv) {
         }
         else if (token != NULL && (strcmp(token, "myauctions") == 0 || strcmp(token, "ma") == 0)) {
             // My Auctions command
-            myauctions_command(token);
+            myauctions_command();
         }
         else if (token != NULL && (strcmp(token, "mybids") == 0 || strcmp(token, "mb") == 0)) {
-
+            // My Bids command
+            mybids_command();
         }
         else if (token != NULL && (strcmp(token, "list") == 0 || strcmp(token, "l") == 0)) {
             // List command
             list_command();
         }
         else if (token != NULL && (strcmp(token, "show_asset") == 0 || strcmp(token, "sa") == 0)) {
+            // Show Asset command
             sas_command(token);
         }
         else if (token != NULL && (strcmp(token, "bid") == 0 || strcmp(token, "b") == 0)) {
-
+            
         }
         else if (token != NULL && (strcmp(token, "show_record") == 0 || strcmp(token, "sr") == 0)) {
 
