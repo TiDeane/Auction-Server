@@ -13,7 +13,7 @@
 
 #define PORT "58011"
 
-#define BUFSIZE 2048
+#define BUFSIZE 6010
 #define MAX_FILENAME 24
 
 int UDP_fd,TCP_fd,errcode;
@@ -33,6 +33,7 @@ char UID_current[7];
 char password_current[9];
 bool logged_in = false;
 
+/* Checks if UID is a 6 digit number */
 bool check_UID_format(char* UID) {
     if (UID == NULL || strlen(UID) != 6) {
         printf("ERR: UID must be a 6-digit number\n");
@@ -48,6 +49,7 @@ bool check_UID_format(char* UID) {
     return true;
 }
 
+/* Checks if password is composed of 8 alphanumeric characters */
 bool check_password_format(char* password) {
     if (password == NULL || strlen(password) != 8) {
         printf("ERR: Password must be composed of 8 alphanumeric characters\n");
@@ -63,6 +65,7 @@ bool check_password_format(char* password) {
     return true;
 }
 
+/* Logs into the Auction Server. Command format is "login UID password" */
 void login_command(char* token) {
 
     if (logged_in) {
@@ -72,13 +75,11 @@ void login_command(char* token) {
 
     char UID[7];
     token = strtok(NULL, " \n");
-
     if (check_UID_format(token))
         strcpy(UID, token);
 
     char password[9];
     token = strtok(NULL, " \n");
-
     if (check_password_format(token))
         strcpy(password, token);
 
@@ -115,6 +116,7 @@ void login_command(char* token) {
     }
 }
 
+/* Logs out of the Auction Server. Command format is "logout" */
 void logout_command() {
     if (!logged_in) {
         printf("ERR: user must be logged in\n");
@@ -147,6 +149,7 @@ void logout_command() {
     }
 }
 
+/* Unregisters user from the Auction Server. Command format is "unregister" */
 void unregister_command(){
 
     if(!logged_in){
@@ -180,6 +183,7 @@ void unregister_command(){
     }
 }
 
+/* Opens a new auction. Command format is "open name asset_fname start_value timeactive" */
 void open_command(char* token) {
 
     if (!logged_in) {
@@ -190,18 +194,34 @@ void open_command(char* token) {
     char name[11]; // 10 alphanumeric characters
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(name, token);
+    else {
+        printf("name argument missing\n");
+        return;
+    }
 
     char asset_fname[MAX_FILENAME+1]; // Check if it's 24 alphanumerical plus '-', '_' and '.' characters
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(asset_fname, token);
+    else {
+        printf("asset name argument missing\n");
+        return;
+    }
 
     char start_value[7]; // Up to 6 digits
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(start_value, token);
+    else {
+        printf("start value argument missing\n");
+        return;
+    }
 
     char timeactive[6]; // Up to 5 digits
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(timeactive, token);
+    else {
+        printf("time active argument missing\n");
+        return;
+    }
 
     FILE *file = fopen(asset_fname, "rb");
     if (file == NULL) {
@@ -282,6 +302,7 @@ void open_command(char* token) {
     }
 }
 
+/* Closes an ongoing auction. Command format is "close AID" */
 void close_command(char* token) {
     if (!logged_in) {
         printf("User must be logged in\n");
@@ -343,6 +364,7 @@ void close_command(char* token) {
     }
 }
 
+/* Lists the current user's auctions. Format is "myauctions" or "ma" */
 void myauctions_command(){
     if(!logged_in){
         printf("ERR: must login first\n");
@@ -373,11 +395,13 @@ void myauctions_command(){
     }
 }
 
+/* Lists the current user's bids. Command format is "mybids" or "mb" */
 void mybids_command(){
     if(!logged_in){
         printf("ERR: must login first\n");
         return;
     }
+
     char LMB_Command[11]="LMB ";
     int command_length = snprintf(LMB_Command, sizeof(LMB_Command), "LMB %s\n", UID_current);
     n=sendto(UDP_fd,LMB_Command,command_length,0,res->ai_addr,res->ai_addrlen);
@@ -402,6 +426,7 @@ void mybids_command(){
     }
 }
 
+/* Lists all currently active auctions. Command format is "list" or "l" */
 void list_command() {
 
     char LST_command[] = "LST\n";
@@ -414,7 +439,7 @@ void list_command() {
     if(n==-1) /*error*/ exit(1);
 
     if(strncmp(buffer,"RLS OK", 6) == 0){
-        printf("List of auctions:\n%s\n", buffer + 7); // Pôr cada par "AID state" entre parenteses retos?
+        printf("List of auctions:\n%s\n", buffer + 7);
         return;
     }
     else if(strncmp(buffer,"RLS NOK", 7) == 0){
@@ -423,11 +448,16 @@ void list_command() {
     }
 }
 
+/* Shows an auction's asset. Command format is "show_asset AID" or "sa AID" */
 void sas_command(char* token) {
 
     char AID[4]; // AID is a 3 digit number
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(AID, token);
+    else {
+        printf("AID argument missing\n");
+        return;
+    }
 
     char SAS_command[9];
     snprintf(SAS_command, sizeof(SAS_command), "SAS %s\n", AID);
@@ -523,6 +553,79 @@ void sas_command(char* token) {
     }
 }
 
+/* Places a bid on an auctions. Command format is "bid AID value" or "b AID value" */
+void bid_command(char* token) {
+    if(!logged_in){
+        printf("ERR: must login first\n");
+        return;
+    }
+
+    char AID[4]; // AID is a 3 digit number
+    if ((token = strtok(NULL, " \n")) != NULL)
+        strcpy(AID, token);
+    else {
+        printf("AID argument missing\n");
+        return;
+    }
+
+    char value[9]; // Not sure what is the maximum value for bids
+    if ((token = strtok(NULL, " \n")) != NULL)
+        strcpy(value, token);
+    else {
+        printf("value argument missing\n");
+        return;
+    }
+
+    char BID_command[34];
+    int command_len = snprintf(BID_command, sizeof(BID_command), "BID %s %s %s %s\n",
+                               UID_current, password_current, AID, value);
+
+    TCP_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
+    if (TCP_fd==-1) exit(1); //error
+
+    memset(&TCP_hints,0,sizeof TCP_hints);
+    TCP_hints.ai_family=AF_INET; //IPv4
+    TCP_hints.ai_socktype=SOCK_STREAM; //TCP socket
+
+    errcode=getaddrinfo(ASIP,ASport,&TCP_hints,&TCP_res);
+    if(errcode!=0)/*error*/exit(1);
+
+    n=connect(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen);
+    if(n==-1)/*error*/exit(1);
+
+    n=write(TCP_fd,BID_command,command_len); // TODO: Do multiple writes to guarantee
+    if(n==-1)/*error*/exit(1);
+
+    n=read(TCP_fd,buffer,BUFSIZE);
+    if(n==-1)/*error*/exit(1);
+
+    if (strncmp(buffer, "RBD NOK\n", 8) == 0) {
+        printf("Auction %s is not active\n", AID);
+        close(TCP_fd);
+        return;
+    }
+    else if (strncmp(buffer, "RBD ACC\n", 8) == 0) {
+        printf("Bid was accepted\n");
+        close(TCP_fd);
+        return;
+    }
+    else if (strncmp(buffer, "RBD REF\n", 8) == 0) {
+        printf("Bid was refused: a larger bid was previously placed\n");
+        close(TCP_fd);
+        return;
+    }
+    else if (strncmp(buffer, "RBD ILG\n", 8) == 0) {
+        printf("You cannot bid on an auction hosted by yourself\n");
+        close(TCP_fd);
+        return;
+    }
+    else if (strncmp(buffer, "RBD NLG\n", 8) == 0) {
+        printf("User was not logged in\n");
+        close(TCP_fd);
+        return;
+    }
+}
+
 int main(int argc, char **argv) {
 
     if (argc >= 2) /* At least one argument */
@@ -596,7 +699,8 @@ int main(int argc, char **argv) {
             sas_command(token);
         }
         else if (token != NULL && (strcmp(token, "bid") == 0 || strcmp(token, "b") == 0)) {
-            
+            // Bid command
+            bid_command(token);
         }
         else if (token != NULL && (strcmp(token, "show_record") == 0 || strcmp(token, "sr") == 0)) {
 
