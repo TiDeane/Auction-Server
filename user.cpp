@@ -545,6 +545,10 @@ void show_record(char *token){
         printf("AID argument missing\n");
         return;
     }
+    if(strlen(AID)!=3){
+        printf("Err: AID must be a 3 digit number\n");
+        return;
+    }
     char SRC_command[10]; 
     snprintf(SRC_command, sizeof(SRC_command), "SRC %s\n", AID);
 
@@ -599,7 +603,7 @@ void show_record(char *token){
                 printf("%s ", token); /*end_time*/
                 
             }
-            printf("hi");
+            printf("\n");
             token=strtok(NULL," ");
             break;
             
