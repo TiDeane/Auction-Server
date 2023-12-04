@@ -1,11 +1,19 @@
 #include "utils.h"
 
+#include <signal.h>
+
 #define PORT "58002"
 
 #define BUFSIZE 90
 
-int UDP_fd,TCP_fd,errcode;
+int UDP_fd,TCP_fd,errcode,n;
 char buffer[BUFSIZE];
+
+socklen_t addrlen;
+struct addrinfo hints,*res;
+struct sockaddr_in UDP_addr;
+//struct addrinfo TCP_hints,*TCP_res;
+//struct sockaddr_in TCP_addr;
 
 bool verbose_mode = false;
 
@@ -27,11 +35,12 @@ void login_command(char *buffer) {
         return;
     }
 
+    // Constructs path to user's directory
     snprintf(UID_directory, sizeof(UID_directory), "USERS/%s", UID);
 
     struct stat info;
-    if (stat(UID_directory, &info) != 0) {
-        //printf("Directory does not exist.\n");
+    if (stat(UID_directory, &info) != 0) { // User directory does not exist
+        //printf("Directory doesn't exist.\n");
         if (mkdir(UID_directory, 0700) == -1) {
             // Failed to create the directory
             perror("mkdir");
@@ -60,12 +69,58 @@ void login_command(char *buffer) {
         fclose(login_file);
         fclose(pass_file);
 
-        // Send response to client
+        char response[] = "RLI REG\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
 
-    } else if (S_ISDIR(info.st_mode)) {
+        return;
+
+    } else if (S_ISDIR(info.st_mode)) { // User directory already exists
         //printf("Directory exists.\n");
+
+        snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
+        snprintf(UID_pass_file_path, sizeof(UID_pass_file_path), "USERS/%s/%s_pass.txt", UID, UID);
+
+        FILE *pass_file = fopen(UID_pass_file_path, "r");
+        if (pass_file == NULL) {
+            perror("Error creating the password file");
+            remove(UID_login_file_path);
+            rmdir(UID_directory);
+            return;
+        }
+
+        fgets(buffer, 10, pass_file); // Reads saved password into the buffer
+
+        if (strncmp(buffer,password,PW_LEN) == 0) { // If password matches
+            FILE *login_file = fopen(UID_login_file_path, "w"); // Creates the login file
+            if (login_file == NULL) {
+                perror("Error creating the login file");
+                rmdir(UID_directory);
+                return;
+            }
+
+            char response[] = "RLI OK\n";
+            n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+            if(n==-1) /*error*/ exit(1);
+
+            return;
+        } else { // Password doesn't match
+            char response[] = "RLI NOK\n";
+            n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+            if(n==-1) /*error*/ exit(1);
+
+            return;
+        }
+
+        FILE *login_file = fopen(UID_login_file_path, "wb");
+        if (login_file == NULL) {
+            perror("Error creating the login file");
+            rmdir(UID_directory);
+            return;
+        }
+
     } else {
-        //printf("Not a directory.\n");
+        //printf("Not a directory.\n"); 
     }
 
     return;
@@ -76,12 +131,6 @@ int main(int argc, char **argv) {
     struct timeval timeout;
 
     int out_fds, ret;
-
-    socklen_t addrlen;
-    struct addrinfo hints,*res;
-    struct sockaddr_in UDP_addr;
-    //struct addrinfo TCP_hints,*TCP_res;
-    //struct sockaddr_in TCP_addr;
 
     char in_str[128];
     char command[4];
@@ -95,6 +144,21 @@ int main(int argc, char **argv) {
             else if (strcmp(argv[i], "-v") == 0)
                 verbose_mode = true; // Opens in verbose mode
         }
+    
+    // Ignore SIGPIPE signal
+    struct sigaction act;
+    memset(&act,0,sizeof act);
+    act.sa_handler=SIG_IGN;
+    if(sigaction(SIGPIPE,&act,NULL)==-1)/*error*/exit(1);
+
+    /*// Register the custom signal handler for SIGINT
+    struct sigaction act_int;
+    memset(&act_int, 0, sizeof(act_int));
+    act_int.sa_handler = sigint_handler;
+    if (sigaction(SIGINT, &act_int, NULL) == -1) {
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }*/
     
     memset(&hints,0,sizeof(hints));
     hints.ai_family=AF_INET;
@@ -174,18 +238,24 @@ int main(int argc, char **argv) {
                         }
                         //TODO: other commands
                         else {
-                            // Send back "ERR\n"
+                            snprintf(buffer,sizeof(buffer), "ERR\n");
+                            n=sendto(UDP_fd,buffer,4,0,(struct sockaddr*)&UDP_addr,addrlen);
+                            if(n==-1) /*error*/ exit(1);
                         }
                     }
                 }
         }
     }
+    freeaddrinfo(res);
+    close(UDP_fd);
 
     return 0;
 }
 
 
 /*
+I'm pretty sure this is used for verbose mode
+
 char host[NI_MAXHOST], service[NI_MAXSERV];
 errcode=getnameinfo( (struct sockaddr *) &UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
 if(errcode==0)

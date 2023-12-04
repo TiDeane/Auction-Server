@@ -1,6 +1,6 @@
 #include "utils.h"
 
-#define PORT "58011"
+#define PORT "58002"
 
 #define BUFSIZE 6010
 
@@ -688,7 +688,7 @@ int main(int argc, char **argv) {
     if(errcode!=0) /*error*/ exit(1);
 
     while(1) {
-        
+
         fgets(buffer, BUFSIZE, stdin);
         char *token = strtok(buffer, " \n"); // gets the first word
 
