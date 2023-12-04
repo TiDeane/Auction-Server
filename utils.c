@@ -46,29 +46,7 @@ bool check_fname_format(char* fname) {
     return true;
 }
 
-/*
-
-CFLAGS=-Wall -g
-
-all: user AS
-
-user: user.o utils.o
-	g++ $(CFLAGS) user.o utils.o -o user
-
-AS: AS.o utils.o
-	g++ $(CFLAGS) AS.o utils.o -o AS
-
-user.o: user.cpp utils.h
-	g++ $(CFLAGS) -c user.cpp
-
-AS.o: AS.cpp utils.h
-	g++ $(CFLAGS) -c AS.cpp
-
-utils.o: utils.c utils.h
-	gcc $(CFLAGS) -c utils.c
-
-clean:
-	rm -f user AS *.o
-
-
-*/
+bool file_exists (char *filename) {
+  struct stat buffer;   
+  return (stat (filename, &buffer) == 0);
+}

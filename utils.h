@@ -27,4 +27,6 @@ bool check_UID_format(char* UID);
 bool check_password_format(char* password);
 bool check_fname_format(char* fname);
 
+bool file_exists (char *filename);
+
 #endif /* UTILS_H */

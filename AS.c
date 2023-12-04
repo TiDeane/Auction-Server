@@ -27,11 +27,15 @@ void login_command(char *buffer) {
     sscanf(buffer, "LIN %s %s\n", UID, password);
 
     if (!check_UID_format(UID)) {
-        printf("ERR: Invalid UID format\n");
+        char response[] = "RLI ERR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
         return;
     }
     else if (!check_password_format(password)) {
-        printf("ERR: Invalid password format\n");
+        char response[] = "RLI ERR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
         return;
     }
 
@@ -119,11 +123,62 @@ void login_command(char *buffer) {
             return;
         }
 
-    } else {
-        //printf("Not a directory.\n"); 
+    } else { // File exists, but it is not a directory
+        remove(UID_directory);
+        char response[] = "RLO ERR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
     }
 
     return;
+}
+
+void logout_command(char* buffer) {
+    char UID[UID_LEN+1], password[PW_LEN+1];
+    char UID_directory[UID_DIR_PATH_LEN+1];
+    char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
+
+    sscanf(buffer, "LOU %s %s\n", UID, password);
+
+    if (!check_UID_format(UID)) {
+        char response[] = "RLO ERR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+    else if (!check_password_format(password)) {
+        char response[] = "RLO ERR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
+    snprintf(UID_directory, sizeof(UID_directory), "USERS/%s", UID);
+
+    struct stat info;
+    if (stat(UID_directory, &info) != 0) { // User directory was not registered
+        char response[] = "RLO UNR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
+    snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
+
+    if (file_exists(UID_login_file_path)) { // User is logged in
+        remove(UID_login_file_path);
+
+        char response[] = "RLO OK\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    } else { // User is not logged in
+        char response[] = "RLO NOK\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
 }
 
 int main(int argc, char **argv) {
@@ -233,8 +288,10 @@ int main(int argc, char **argv) {
                         sscanf(buffer, "%s ", command);
 
                         if (strcmp(command, "LIN") == 0) {
-                            // Login command
                             login_command(buffer);
+                        }
+                        else if (strcmp(command, "LOU") == 0) {
+                            logout_command(buffer);
                         }
                         //TODO: other commands
                         else {
