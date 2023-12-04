@@ -20,6 +20,8 @@
 #define PW_LEN 8
 
 #define UID_DIR_PATH_LEN (UID_LEN+6) // USERS/(uid)
+#define UID_HOST_DIR_PATH_LEN (UID_DIR_PATH_LEN+7) // USERS/(uid)/HOSTED
+#define UID_BID_DIR_PATH_LEN (UID_DIR_PATH_LEN+7) // USERS/(uid)/BIDDED
 #define UID_LOGIN_FILE_LEN (UID_DIR_PATH_LEN+1+UID_LEN+10) // USERS/(uid)/(uid)_login.txt
 #define UID_PASS_FILE_LEN (UID_DIR_PATH_LEN+1+UID_LEN+9) // USERS/(uid)/(uid)_pass.txt
 
@@ -28,5 +30,6 @@ bool check_password_format(char* password);
 bool check_fname_format(char* fname);
 
 bool file_exists (char *filename);
+bool dir_exists (char *dirpath);
 
 #endif /* UTILS_H */

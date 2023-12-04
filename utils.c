@@ -50,3 +50,8 @@ bool file_exists (char *filename) {
   struct stat buffer;   
   return (stat (filename, &buffer) == 0);
 }
+
+bool dir_exists (char *dirpath) {
+    struct stat info;
+    return (stat(dirpath, &info) == 0 && S_ISDIR(info.st_mode));
+}

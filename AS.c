@@ -4,7 +4,8 @@
 
 #define PORT "58002"
 
-#define BUFSIZE 90
+#define BUFSIZE 6010
+#define MAX_AUCTION 999
 
 int UDP_fd,TCP_fd,errcode,n;
 char buffer[BUFSIZE];
@@ -17,10 +18,39 @@ struct sockaddr_in UDP_addr;
 
 bool verbose_mode = false;
 
+int create_login_files(char *UID, char *password) {
+    char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
+    char UID_pass_file_path[UID_PASS_FILE_LEN+1];
+
+    snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
+    snprintf(UID_pass_file_path, sizeof(UID_pass_file_path), "USERS/%s/%s_pass.txt", UID, UID);
+
+    FILE *login_file = fopen(UID_login_file_path, "wb");
+    if (login_file == NULL) {
+        perror("Error creating the login file");
+        return -1;
+    }
+    FILE *pass_file = fopen(UID_pass_file_path, "wb");
+    if (pass_file == NULL) {
+        perror("Error creating the password file");
+        remove(UID_login_file_path);
+        fclose(login_file);
+        return -1;
+    }
+
+    fwrite(password,1,PW_LEN,pass_file);
+
+    fclose(login_file);
+    fclose(pass_file);
+
+    return 0;
+}
 
 void login_command(char *buffer) {
     char UID[UID_LEN+1], password[PW_LEN+1];
     char UID_directory[UID_DIR_PATH_LEN+1];
+    char UID_HOST_directory[UID_HOST_DIR_PATH_LEN+1];
+    char UID_BID_directory[UID_BID_DIR_PATH_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
     char UID_pass_file_path[UID_PASS_FILE_LEN+1];
 
@@ -42,8 +72,9 @@ void login_command(char *buffer) {
     // Constructs path to user's directory
     snprintf(UID_directory, sizeof(UID_directory), "USERS/%s", UID);
 
+    // Use the function dir_exists() ?
     struct stat info;
-    if (stat(UID_directory, &info) != 0) { // User directory does not exist
+    if (stat(UID_directory, &info) != 0) { // User directory does not exist, first time registering
         //printf("Directory doesn't exist.\n");
         if (mkdir(UID_directory, 0700) == -1) {
             // Failed to create the directory
@@ -51,28 +82,25 @@ void login_command(char *buffer) {
             return;
         }
 
-        snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
-        snprintf(UID_pass_file_path, sizeof(UID_pass_file_path), "USERS/%s/%s_pass.txt", UID, UID);
-
-        FILE *login_file = fopen(UID_login_file_path, "wb");
-        if (login_file == NULL) {
-            perror("Error creating the login file");
-            rmdir(UID_directory);
-            return;
-        }
-        FILE *pass_file = fopen(UID_pass_file_path, "wb");
-        if (pass_file == NULL) {
-            perror("Error creating the password file");
-            remove(UID_login_file_path);
-            rmdir(UID_directory);
+        if (create_login_files(UID, password) == -1) {
+            printf("ERR: could not create UID's files\n");
             return;
         }
 
-        fwrite(password,1,PW_LEN,pass_file);
+        snprintf(UID_HOST_directory, sizeof(UID_HOST_directory), "USERS/%s/HOSTED", UID);
+        snprintf(UID_BID_directory, sizeof(UID_BID_directory), "USERS/%s/BIDDED", UID);
 
-        fclose(login_file);
-        fclose(pass_file);
-
+        if (mkdir(UID_HOST_directory, 0700) == -1) {
+            // Failed to create the directory
+            perror("mkdir");
+            return;
+        }
+        if (mkdir(UID_BID_directory, 0700) == -1) {
+            // Failed to create the directory
+            perror("mkdir");
+            return;
+        }
+        
         char response[] = "RLI REG\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
         if(n==-1) /*error*/ exit(1);
@@ -85,45 +113,54 @@ void login_command(char *buffer) {
         snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
         snprintf(UID_pass_file_path, sizeof(UID_pass_file_path), "USERS/%s/%s_pass.txt", UID, UID);
 
-        FILE *pass_file = fopen(UID_pass_file_path, "r");
-        if (pass_file == NULL) {
-            perror("Error creating the password file");
-            remove(UID_login_file_path);
-            rmdir(UID_directory);
-            return;
-        }
+        if (file_exists(UID_pass_file_path)) { // User is registered
 
-        fgets(buffer, 10, pass_file); // Reads saved password into the buffer
-
-        if (strncmp(buffer,password,PW_LEN) == 0) { // If password matches
-            FILE *login_file = fopen(UID_login_file_path, "w"); // Creates the login file
-            if (login_file == NULL) {
-                perror("Error creating the login file");
+            FILE *pass_file = fopen(UID_pass_file_path, "r");
+            if (pass_file == NULL) {
+                perror("Error creating the password file");
+                remove(UID_login_file_path);
                 rmdir(UID_directory);
                 return;
             }
 
-            char response[] = "RLI OK\n";
+            fgets(buffer, 10, pass_file); // Reads saved password into the buffer
+
+            if (strncmp(buffer,password,PW_LEN) == 0) { // If password matches
+                FILE *login_file = fopen(UID_login_file_path, "w"); // Creates the login file
+                if (login_file == NULL) {
+                    perror("Error creating the login file");
+                    rmdir(UID_directory);
+                    fclose(pass_file);
+                    return;
+                }
+
+                char response[] = "RLI OK\n";
+                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+                if(n==-1) /*error*/ exit(1);
+
+                fclose(login_file);
+                fclose(pass_file);
+                return;
+            } else { // Password doesn't match
+                char response[] = "RLI NOK\n";
+                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+                if(n==-1) /*error*/ exit(1);
+
+                fclose(pass_file);
+                return;
+            }
+        } else { // Directory exists but user is not registered, returning user
+            if (create_login_files(UID, password) == -1) {
+                printf("ERR: could not create UID's files\n");
+                return;
+            }
+
+            char response[] = "RLI REG\n";
             n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
             if(n==-1) /*error*/ exit(1);
-
-            return;
-        } else { // Password doesn't match
-            char response[] = "RLI NOK\n";
-            n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
-            if(n==-1) /*error*/ exit(1);
-
-            return;
         }
 
-        FILE *login_file = fopen(UID_login_file_path, "wb");
-        if (login_file == NULL) {
-            perror("Error creating the login file");
-            rmdir(UID_directory);
-            return;
-        }
-
-    } else { // File exists, but it is not a directory
+    } else { // File exists, but it is not a directory. Should not happen
         remove(UID_directory);
         char response[] = "RLO ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
@@ -156,8 +193,7 @@ void logout_command(char* buffer) {
 
     snprintf(UID_directory, sizeof(UID_directory), "USERS/%s", UID);
 
-    struct stat info;
-    if (stat(UID_directory, &info) != 0) { // User directory was not registered
+    if (!dir_exists(UID_directory)) { // User directory doesn't exist
         char response[] = "RLO UNR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
         if(n==-1) /*error*/ exit(1);
