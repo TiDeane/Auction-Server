@@ -249,6 +249,7 @@ void unregister_command(char* buffer) {
 }
 
 int main(int argc, char **argv) {
+    pid_t pid;
     fd_set inputs, testfds;
     struct timeval timeout;
 
@@ -354,17 +355,47 @@ int main(int argc, char **argv) {
                         
                         sscanf(buffer, "%s ", command);
 
-                        if (strcmp(command, "LIN") == 0) {
-                            login_command(buffer);
-                        }
-                        else if (strcmp(command, "LOU") == 0) {
-                            logout_command(buffer);
-                        }
-                        //TODO: other commands
-                        else {
-                            snprintf(buffer,sizeof(buffer), "ERR\n");
-                            n=sendto(UDP_fd,buffer,4,0,(struct sockaddr*)&UDP_addr,addrlen);
-                            if(n==-1) /*error*/ exit(1);
+                        if((pid=fork())==-1) /*error*/ exit(1);
+                        else if (pid==0) { // Child process
+                            if (strcmp(command, "LIN") == 0) {
+                                login_command(buffer);
+                            }
+                            else if (strcmp(command, "LOU") == 0) {
+                                logout_command(buffer);
+                            }
+                            else if (strcmp(command, "UNR") == 0) {
+                                unregister_command(buffer);
+                            }
+                            else if (strcmp(command, "OPA") == 0) {
+                                // Open command
+                            }
+                            else if (strcmp(command, "CLS") == 0) {
+                                // Close command
+                            }
+                            else if (strcmp(command, "LOU") == 0) {
+                                // My Auctions command
+                            }
+                            else if (strcmp(command, "LMB") == 0) {
+                                // My Bids command
+                            }
+                            else if (strcmp(command, "LST") == 0) {
+                                // List command
+                            }
+                            else if (strcmp(command, "SAS") == 0) {
+                                // Show Asset command
+                            }
+                            else if (strcmp(command, "BID") == 0) {
+                                // Bid command
+                            }
+                            else if (strcmp(command, "SRC") == 0) {
+                                // Show Record command
+                            }
+                            else {
+                                snprintf(buffer,sizeof(buffer), "ERR\n");
+                                n=sendto(UDP_fd,buffer,4,0,(struct sockaddr*)&UDP_addr,addrlen);
+                                if(n==-1) /*error*/ exit(1);
+                            }
+                            exit(0); // Ends child process
                         }
                     }
                 }
