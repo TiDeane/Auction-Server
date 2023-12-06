@@ -1,7 +1,5 @@
 #include "utils.h"
 
-#include <signal.h>
-
 #define PORT "58002"
 
 #define BUFSIZE 6010
@@ -9,6 +7,8 @@
 
 int UDP_fd,TCP_fd,errcode,n;
 char buffer[BUFSIZE];
+
+int AID_count = 1;
 
 socklen_t addrlen;
 struct addrinfo hints,*res;
@@ -245,7 +245,64 @@ void unregister_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
         return;
     }
+}
 
+void myauctions_command(char* buffer) {
+    struct dirent **filelist;
+    int n_auctions, i;
+    char AID[AID_LEN+1];
+    char UID[UID_LEN+1];
+    char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
+    char dirname[21];
+    char pathname[32];
+    char AID_state[AID_LEN+3];
+
+    sscanf(buffer, "LMA %s\n", UID);
+    sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
+    if (!file_exists(UID_login_file_path)) {
+        char response[] = "RMA NLG\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
+    sprintf(dirname,"USERS/%s/HOSTED/", UID);
+    n_auctions = scandir(dirname, &filelist, NULL, alphasort);
+    printf("n_auctions: %d\n", n_auctions);
+    if (n_auctions <= 0) {
+        char response[] = "RMA NOK\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
+    bzero(buffer, BUFSIZE);
+    strcpy(buffer,"RMA OK");
+
+    i = 2; // indexes 0 and 1 are "." and ".."
+    while (i < n_auctions){
+        strcat(buffer," ");
+
+        //TODO: check timeactive and see if END needs to be created
+        sscanf(filelist[i]->d_name,"%3s.txt",AID);
+        sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
+        if (file_exists(pathname))
+            sprintf(AID_state,"%s 0", AID);
+        else
+            sprintf(AID_state,"%s 1", AID);
+        
+        strcat(buffer, AID_state);
+
+        free(filelist[i]);
+        i++;
+    }
+    free(filelist);
+
+    strcat(buffer,"\n");
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    return;
 }
 
 int main(int argc, char **argv) {
@@ -372,8 +429,8 @@ int main(int argc, char **argv) {
                             else if (strcmp(command, "CLS") == 0) {
                                 // Close command
                             }
-                            else if (strcmp(command, "LOU") == 0) {
-                                // My Auctions command
+                            else if (strcmp(command, "LMA") == 0) {
+                                myauctions_command(buffer);
                             }
                             else if (strcmp(command, "LMB") == 0) {
                                 // My Bids command

@@ -14,8 +14,11 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <dirent.h>
+#include <signal.h>
 
 #define MAX_FILENAME 24
+#define AID_LEN 3
 #define UID_LEN 6
 #define PW_LEN 8
 
