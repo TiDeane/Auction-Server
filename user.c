@@ -347,7 +347,7 @@ void myauctions_command(){
         }
 
     if(strncmp(buffer,"RMA OK",6)==0){
-        printf("My auctions: %s", buffer + 7);
+        printf("My auctions:\n%s", buffer + 7);
         return;
     }
     else if(strncmp(buffer,"RMA NLG",7)==0){
@@ -386,7 +386,7 @@ void mybids_command(){
         }
 
     if(strncmp(buffer,"RMB OK",6)==0){
-        printf("My bids: %s", buffer + 7);
+        printf("My bids:\n%s", buffer + 7);
         return;
     }
     else if(strncmp(buffer,"RMB NLG",7)==0){
@@ -412,7 +412,7 @@ void list_command() {
     if(n==-1) /*error*/ exit(1);
 
     if(strncmp(buffer,"RLS OK", 6) == 0){
-        printf("List of auctions:\n%s\n", buffer + 7);
+        printf("List of auctions:\n%s", buffer + 7);
         return;
     }
     else if(strncmp(buffer,"RLS NOK", 7) == 0){

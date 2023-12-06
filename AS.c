@@ -363,6 +363,53 @@ void mybids_command(char* buffer) {
     return;
 }
 
+void list_command(char* buffer) {
+    struct dirent **filelist;
+    int n_entries, i;
+    char AID[AID_LEN+1];
+    char dirname[10];
+    char pathname[32];
+    char AID_state[AID_LEN+3];
+
+    sprintf(dirname,"AUCTIONS/");
+    n_entries = scandir(dirname, &filelist, NULL, alphasort);
+    free(filelist[0]); // "."
+    free(filelist[1]); // ".."
+    free(filelist[2]); // ".gitkeep"
+    if (n_entries == 3) { // no auction has been started yet
+        char response[] = "RLS NOK\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    } else if (n_entries==-1)
+        return;
+
+    bzero(buffer, BUFSIZE);
+    strcpy(buffer,"RLS OK");
+
+    for (i = 3; i < n_entries; i++){
+        strcat(buffer," ");
+        //TODO: check timeactive and see if END needs to be created
+        sscanf(filelist[i]->d_name,"%3s",AID);
+        sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
+        if (file_exists(pathname))
+            sprintf(AID_state,"%s 0", AID);
+        else
+            sprintf(AID_state,"%s 1", AID);
+        
+        strcat(buffer, AID_state);
+        free(filelist[i]);
+    }
+    free(filelist);
+
+    strcat(buffer,"\n");
+    printf("buffer: %s\n",buffer);
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,addrlen);
+    if(n==-1) /*error*/ exit(1);
+
+    return;
+}
+
 int main(int argc, char **argv) {
     pid_t pid;
     fd_set inputs, testfds;
@@ -494,7 +541,7 @@ int main(int argc, char **argv) {
                                 mybids_command(buffer);
                             }
                             else if (strcmp(command, "LST") == 0) {
-                                // List command
+                                list_command(buffer);
                             }
                             else if (strcmp(command, "SAS") == 0) {
                                 // Show Asset command
