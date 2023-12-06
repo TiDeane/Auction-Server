@@ -338,6 +338,7 @@ void myauctions_command(){
     (struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
 
+    // Is bzero(buffer, BUFSIZE) faster?
     int buf_len = strlen(buffer);
     for (int i = 0; i < buf_len-1; i++)
         if (buffer[i] == '\n') {
@@ -375,6 +376,14 @@ void mybids_command(){
     n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
     (struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
+
+    // Is bzero(buffer, BUFSIZE) faster?
+    int buf_len = strlen(buffer);
+    for (int i = 0; i < buf_len-1; i++)
+        if (buffer[i] == '\n') {
+            buffer[i+1] = '\0';
+            break;
+        }
 
     if(strncmp(buffer,"RMB OK",6)==0){
         printf("My bids: %s", buffer + 7);
