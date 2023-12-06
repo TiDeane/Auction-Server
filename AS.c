@@ -18,6 +18,13 @@ struct sockaddr_in UDP_addr;
 
 bool verbose_mode = false;
 
+void sigint_handler(int signum) {
+    printf("Terminating server...\n");
+    close(UDP_fd);
+    close(TCP_fd);
+    exit(signum);
+}
+
 int create_login_files(char *UID, char *password) {
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
     char UID_pass_file_path[UID_PASS_FILE_LEN+1];
@@ -72,12 +79,9 @@ void login_command(char *buffer) {
     // Constructs path to user's directory
     snprintf(UID_directory, sizeof(UID_directory), "USERS/%s", UID);
 
-    // Use the function dir_exists() ?
-    struct stat info;
-    if (stat(UID_directory, &info) != 0) { // User directory does not exist, first time registering
-        //printf("Directory doesn't exist.\n");
+    if (!dir_exists(UID_directory)) { // User directory does not exist, first time registering
+
         if (mkdir(UID_directory, 0700) == -1) {
-            // Failed to create the directory
             perror("mkdir");
             return;
         }
@@ -91,24 +95,19 @@ void login_command(char *buffer) {
         snprintf(UID_BID_directory, sizeof(UID_BID_directory), "USERS/%s/BIDDED", UID);
 
         if (mkdir(UID_HOST_directory, 0700) == -1) {
-            // Failed to create the directory
             perror("mkdir");
             return;
         }
         if (mkdir(UID_BID_directory, 0700) == -1) {
-            // Failed to create the directory
             perror("mkdir");
             return;
         }
         
-        char response[] = "RLI REG\n";
+        char response[] = "RLI REG\n"; // New user registered
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
         if(n==-1) /*error*/ exit(1);
-
         return;
-
-    } else if (S_ISDIR(info.st_mode)) { // User directory already exists
-        //printf("Directory exists.\n");
+    } else { // User directory already exists
 
         snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
         snprintf(UID_pass_file_path, sizeof(UID_pass_file_path), "USERS/%s/%s_pass.txt", UID, UID);
@@ -134,7 +133,7 @@ void login_command(char *buffer) {
                     return;
                 }
 
-                char response[] = "RLI OK\n";
+                char response[] = "RLI OK\n"; // Successfully logged in
                 n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
                 if(n==-1) /*error*/ exit(1);
 
@@ -142,7 +141,7 @@ void login_command(char *buffer) {
                 fclose(pass_file);
                 return;
             } else { // Password doesn't match
-                char response[] = "RLI NOK\n";
+                char response[] = "RLI NOK\n"; // Unsuccessful login
                 n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
                 if(n==-1) /*error*/ exit(1);
 
@@ -155,17 +154,11 @@ void login_command(char *buffer) {
                 return;
             }
 
-            char response[] = "RLI REG\n";
+            char response[] = "RLI REG\n"; // Successfully registered again
             n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
             if(n==-1) /*error*/ exit(1);
+            return;
         }
-
-    } else { // File exists, but it is not a directory. Should not happen
-        remove(UID_directory);
-        char response[] = "RLO ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
-        if(n==-1) /*error*/ exit(1);
-        return;
     }
 
     return;
@@ -217,6 +210,44 @@ void logout_command(char* buffer) {
     }
 }
 
+void unregister_command(char* buffer) {
+    char UID[UID_LEN+1], password[PW_LEN+1];
+    char UID_directory[UID_DIR_PATH_LEN+1];
+    char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
+    char UID_pass_file_path[UID_PASS_FILE_LEN+1];
+
+    sscanf(buffer, "UNR %s %s\n", UID, password);
+
+    snprintf(UID_directory, sizeof(UID_directory), "USERS/%s", UID);
+
+    if (!dir_exists(UID_directory)) { // User directory does not exist
+        char response[] = "RUR UNR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
+    snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
+    
+    if (file_exists(UID_login_file_path)) { // User was logged in
+        snprintf(UID_pass_file_path, sizeof(UID_pass_file_path), "USERS/%s/%s_pass.txt", UID, UID);
+
+        remove(UID_login_file_path);
+        remove(UID_pass_file_path);
+
+        char response[] = "RUR OK\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    } else {
+        char response[] = "RUR NOK\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
+}
+
 int main(int argc, char **argv) {
     fd_set inputs, testfds;
     struct timeval timeout;
@@ -242,14 +273,14 @@ int main(int argc, char **argv) {
     act.sa_handler=SIG_IGN;
     if(sigaction(SIGPIPE,&act,NULL)==-1)/*error*/exit(1);
 
-    /*// Register the custom signal handler for SIGINT
+    // Handler for SIGINT
     struct sigaction act_int;
     memset(&act_int, 0, sizeof(act_int));
     act_int.sa_handler = sigint_handler;
     if (sigaction(SIGINT, &act_int, NULL) == -1) {
         perror("sigaction");
         exit(EXIT_FAILURE);
-    }*/
+    }
     
     memset(&hints,0,sizeof(hints));
     hints.ai_family=AF_INET;
