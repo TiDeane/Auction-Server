@@ -338,14 +338,11 @@ void myauctions_command(){
     (struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
 
-    // Is bzero(buffer, BUFSIZE) faster?
-    int buf_len = strlen(buffer);
-    for (int i = 0; i < buf_len-1; i++)
-        if (buffer[i] == '\n') {
-            buffer[i+1] = '\0';
-            break;
-        }
-
+    if (buffer[n-1]=='\n')
+        buffer[n]='\0';
+    else
+        return; // error
+    
     if(strncmp(buffer,"RMA OK",6)==0){
         printf("My auctions:\n%s", buffer + 7);
         return;
@@ -377,13 +374,10 @@ void mybids_command(){
     (struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
 
-    // Is bzero(buffer, BUFSIZE) faster?
-    int buf_len = strlen(buffer);
-    for (int i = 0; i < buf_len-1; i++)
-        if (buffer[i] == '\n') {
-            buffer[i+1] = '\0';
-            break;
-        }
+    if (buffer[n-1]=='\n')
+        buffer[n]='\0';
+    else
+        return; // error
 
     if(strncmp(buffer,"RMB OK",6)==0){
         printf("My bids:\n%s", buffer + 7);
@@ -410,6 +404,11 @@ void list_command() {
     n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
     (struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
+
+    if (buffer[n-1]=='\n')
+        buffer[n]='\0';
+    else
+        return; // error
 
     if(strncmp(buffer,"RLS OK", 6) == 0){
         printf("List of auctions:\n%s", buffer + 7);
@@ -467,8 +466,6 @@ void sas_command(char* token) {
         long fsize;
         ssize_t nleft,nwritten,nread;
 
-        bzero(buffer, BUFSIZE);
-
         nread = read(TCP_fd,buffer,BUFSIZE); // Reads file name, size and data
         if (nread == -1)/*error*/exit(1);
 
@@ -499,8 +496,6 @@ void sas_command(char* token) {
         nleft = fsize - nwritten;
 
         while (nleft > 0){
-            bzero(buffer, BUFSIZE); // Nulls the buffer for reading
-
             if (nleft > BUFSIZE)
                 nread = read(TCP_fd, buffer, BUFSIZE);
             else
@@ -712,8 +707,10 @@ int main(int argc, char **argv) {
         }
         else if (token != NULL && strcmp(token, "exit") == 0) {
             // Exit command
-            if (logged_in == true)
-                logout_command();
+            if (logged_in == true) {
+                printf("You need to logout before exiting!\n");
+                continue;
+            }
             break;
         }
         else if (token != NULL && strcmp(token, "open") == 0) {
