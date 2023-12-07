@@ -25,6 +25,31 @@ void sigint_handler(int signum) {
     exit(signum);
 }
 
+void init_signals() {
+    struct sigaction act;
+    memset(&act,0,sizeof act);
+    act.sa_handler=SIG_IGN;
+    if(sigaction(SIGPIPE,&act,NULL)==-1)/*error*/exit(1);
+
+    struct sigaction act_child;
+    memset(&act_child, 0, sizeof(act_child));
+    act_child.sa_handler = SIG_IGN;
+    if (sigaction(SIGCHLD, &act_child, NULL) == -1)
+        exit(1);
+    
+    struct sigaction act_sev;
+    memset(&act_sev, 0, sizeof(act_sev));
+    act_sev.sa_handler = SIG_IGN;
+    if (sigaction(SIGSEGV, &act_sev, NULL) == -1)
+        exit(1);
+
+    struct sigaction act_int;
+    memset(&act_int, 0, sizeof(act_int));
+    act_int.sa_handler = sigint_handler;
+    if (sigaction(SIGINT, &act_int, NULL) == -1)
+        exit(1);
+}
+
 int create_login_files(char *UID, char *password) {
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
     char UID_pass_file_path[UID_PASS_FILE_LEN+1];
@@ -472,7 +497,7 @@ void show_record_command(char* buffer) {
         }
         free(bidlist);
     } else { // Auction directory doesn't exist
-        char response[] = "RLS NOK\n";
+        char response[] = "RRC NOK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
         if(n==-1) /*error*/ exit(1);
         return;
@@ -518,20 +543,7 @@ int main(int argc, char **argv) {
                 verbose_mode = true; // Opens in verbose mode
         }
     
-    // Ignore SIGPIPE signal
-    struct sigaction act;
-    memset(&act,0,sizeof act);
-    act.sa_handler=SIG_IGN;
-    if(sigaction(SIGPIPE,&act,NULL)==-1)/*error*/exit(1);
-
-    // Handler for SIGINT
-    struct sigaction act_int;
-    memset(&act_int, 0, sizeof(act_int));
-    act_int.sa_handler = sigint_handler;
-    if (sigaction(SIGINT, &act_int, NULL) == -1) {
-        perror("sigaction");
-        exit(EXIT_FAILURE);
-    }
+    init_signals();
     
     memset(&hints,0,sizeof(hints));
     hints.ai_family=AF_INET;

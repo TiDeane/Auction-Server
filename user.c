@@ -634,8 +634,7 @@ void show_record_command(char *token){
                 buffer[i-1] = '\n';
         }
 
-        char* ptr = buffer + 7;
-        printf("%s",ptr);
+        printf("%s",buffer + 7);
         return;
     }
 }
