@@ -36,13 +36,25 @@ bool check_password_format(char* password) {
 
 bool check_fname_format(char* fname) {
     int fname_len = strlen(fname);
-    if (fname == NULL || fname_len > 24)
+    if (fname == NULL || fname_len > MAX_FILENAME)
         return false;
     
     for (int i = 0; i < fname_len; i++) 
         if (!isalnum(fname[i]) && fname[i] != '-' && fname[i] != '_' && fname[i] != '.')
             return false;
     
+    return true;
+}
+
+bool check_desc_name_format(char *name) {
+    int name_len = strlen(name);
+    if (name == NULL || name_len > MAX_DESC_NAME_LEN)
+        return false;
+    
+    for (int i = 0; i < name_len; i++) 
+        if (!isalnum(name[i]))
+            return false;
+            
     return true;
 }
 

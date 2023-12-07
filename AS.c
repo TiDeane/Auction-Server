@@ -249,7 +249,7 @@ void unregister_command(char* buffer) {
 
 void myauctions_command(char* buffer) {
     struct dirent **filelist;
-    int n_entries, i;
+    int n_entries, i, len;
     char AID[AID_LEN+1];
     char UID[UID_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
@@ -275,25 +275,25 @@ void myauctions_command(char* buffer) {
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
         if(n==-1) /*error*/ exit(1);
         return;
-    } else if (n_entries==-1)
+    } else if (n_entries<=0)
         return;
 
-    bzero(buffer, BUFSIZE);
     strcpy(buffer,"RMA OK");
 
-    free(filelist[0]); // "."
-    free(filelist[1]); // ".."
-    for (i = 2; i < n_entries; i++){
-        strcat(buffer," ");
-        //TODO: check timeactive and see if END needs to be created
-        sscanf(filelist[i]->d_name,"%3s.txt",AID);
-        sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
-        if (file_exists(pathname))
-            sprintf(AID_state,"%s 0", AID);
-        else
-            sprintf(AID_state,"%s 1", AID);
-        
-        strcat(buffer, AID_state);
+    for (i = 0; i < n_entries; i++){
+        len = strlen(filelist[i]->d_name);
+        if (len == 7) {
+            strcat(buffer," ");
+            //TODO: check timeactive and see if END needs to be created
+            sscanf(filelist[i]->d_name,"%3s.txt",AID);
+            sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
+            if (file_exists(pathname))
+                sprintf(AID_state,"%s 0", AID);
+            else
+                sprintf(AID_state,"%s 1", AID);
+            
+            strcat(buffer, AID_state);
+        }
         free(filelist[i]);
     }
     free(filelist);
@@ -307,7 +307,7 @@ void myauctions_command(char* buffer) {
 
 void mybids_command(char* buffer) {
     struct dirent **filelist;
-    int n_entries, i;
+    int n_entries, i, len;
     char AID[AID_LEN+1];
     char UID[UID_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
@@ -333,25 +333,25 @@ void mybids_command(char* buffer) {
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
         if(n==-1) /*error*/ exit(1);
         return;
-    } else if (n_entries==-1)
+    } else if (n_entries<=0)
         return;
 
-    bzero(buffer, BUFSIZE);
     strcpy(buffer,"RMB OK");
 
-    free(filelist[0]); // "."
-    free(filelist[1]); // ".."
-    for (i = 2; i < n_entries; i++){
-        strcat(buffer," ");
-        //TODO: check timeactive and see if END needs to be created
-        sscanf(filelist[i]->d_name,"%3s.txt",AID);
-        sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
-        if (file_exists(pathname))
-            sprintf(AID_state,"%s 0", AID);
-        else
-            sprintf(AID_state,"%s 1", AID);
-        
-        strcat(buffer, AID_state);
+    for (i = 0; i < n_entries; i++){
+        len = strlen(filelist[i]->d_name);
+        if (len == 7) {
+            strcat(buffer," ");
+            //TODO: check timeactive and see if END needs to be created
+            sscanf(filelist[i]->d_name,"%3s.txt",AID);
+            sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
+            if (file_exists(pathname))
+                sprintf(AID_state,"%s 0", AID);
+            else
+                sprintf(AID_state,"%s 1", AID);
+            
+            strcat(buffer, AID_state);
+        }
         free(filelist[i]);
     }
     free(filelist);
@@ -365,7 +365,7 @@ void mybids_command(char* buffer) {
 
 void list_command(char* buffer) {
     struct dirent **filelist;
-    int n_entries, i;
+    int n_entries, i, len;
     char AID[AID_LEN+1];
     char dirname[10];
     char pathname[32];
@@ -373,40 +373,128 @@ void list_command(char* buffer) {
 
     sprintf(dirname,"AUCTIONS/");
     n_entries = scandir(dirname, &filelist, NULL, alphasort);
-    free(filelist[0]); // "."
-    free(filelist[1]); // ".."
-    free(filelist[2]); // ".gitkeep"
     if (n_entries == 3) { // no auction has been started yet
+        free(filelist[0]); // "."
+        free(filelist[1]); // ".."
+        free(filelist[2]); // ".gitkeep"
         char response[] = "RLS NOK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
         if(n==-1) /*error*/ exit(1);
         return;
-    } else if (n_entries==-1)
+    } else if (n_entries<=0)
         return;
 
-    bzero(buffer, BUFSIZE);
     strcpy(buffer,"RLS OK");
 
-    for (i = 3; i < n_entries; i++){
-        strcat(buffer," ");
-        //TODO: check timeactive and see if END needs to be created
-        sscanf(filelist[i]->d_name,"%3s",AID);
-        sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
-        if (file_exists(pathname))
-            sprintf(AID_state,"%s 0", AID);
-        else
-            sprintf(AID_state,"%s 1", AID);
-        
-        strcat(buffer, AID_state);
+    for (i = 0; i < n_entries; i++){
+        len = strlen(filelist[i]->d_name);
+        if (len == 3) {
+            strcat(buffer," ");
+            //TODO: check timeactive and see if END needs to be created
+            sscanf(filelist[i]->d_name,"%3s",AID);
+            sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
+            if (file_exists(pathname))
+                sprintf(AID_state,"%s 0", AID);
+            else
+                sprintf(AID_state,"%s 1", AID);
+            
+            strcat(buffer, AID_state);
+        }
         free(filelist[i]);
     }
     free(filelist);
 
     strcat(buffer,"\n");
-    printf("buffer: %s\n",buffer);
     n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,addrlen);
     if(n==-1) /*error*/ exit(1);
 
+    return;
+}
+
+void show_record_command(char* buffer) {
+    struct dirent **bidlist;
+    int n_bids, len, bids_read = 0;
+    char UID[UID_LEN+1];
+    char AID[AID_LEN+1];
+    char dirname[13];
+    char pathname[32];
+    char auction_name[MAX_DESC_NAME_LEN+1];
+    char auction_fname[MAX_FILENAME+1];
+    char value[MAX_VALUE_LEN+1]; // Used for the auction's start value and the bids' value
+    char date[DATE_LEN+1]; // Used for the auction's start date and the bids' date
+    char time[TIME_LEN+1]; // Used for the auction's start time and the bids' time
+    char duration_sec[MAX_DURATION_LEN+1]; // Used for the auction's time active and the bids' time
+    int info_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+                    MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
+    char info[info_size+1];
+
+    sscanf(buffer, "SRC %03s", AID); //TODO: check if it's read with all 3 digits
+    sprintf(dirname,"AUCTIONS/%s",AID);
+    if (dir_exists(dirname)) { // Auction exists
+        sprintf(pathname,"AUCTIONS/%s/START_%s.txt",AID,AID);
+        FILE *start_file = fopen(pathname, "r");
+        if (start_file == NULL) {
+            perror("Error opening the START file");
+            return;
+        }
+        fread(info,1,info_size,start_file);
+        fclose(start_file);
+
+        strcpy(buffer,"RRC OK ");
+        sscanf(info,"%s %s %s %s %s %s %s",UID,auction_name,auction_fname,
+                value,duration_sec,date,time);
+        sprintf(info,"%s %s %s %s %s %s %s",UID,auction_name,auction_fname,
+                value,date,time,duration_sec);
+        strcat(buffer,info);
+
+        sprintf(pathname,"AUCTIONS/%s/BIDS/",AID);
+        n_bids = scandir(pathname, &bidlist, NULL, alphasort); // Test versionsort if this doesn't work
+        if (n_bids<=0)
+            return;
+        while (n_bids--) {
+            len = strlen(bidlist[n_bids]->d_name);
+            if (len == 10 && bids_read < 50) {
+                sprintf(pathname,"AUCTIONS/%s/BIDS/%s",AID,bidlist[n_bids]->d_name);
+                FILE *bid_file = fopen(pathname, "r");
+                if (bid_file == NULL) {
+                    perror("Error opening a bid's file");
+                    return;
+                }
+                n = fread(info,1,info_size,bid_file);
+                info[n] = '\0';
+                strcat(buffer," B ");
+                strcat(buffer,info);
+
+                fclose(bid_file);
+                bids_read++;
+            }
+            free(bidlist[n_bids]);
+        }
+        free(bidlist);
+    } else { // Auction directory doesn't exist
+        char response[] = "RLS NOK\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
+    sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
+    if (file_exists(pathname)) {
+        FILE *end_file = fopen(pathname, "r");
+        if (end_file == NULL) {
+            perror("Error opening a bid's file");
+            return;
+        }
+        n = fread(info,1,info_size,end_file);
+        info[n] = '\0';
+
+        strcat(buffer, " E ");
+        strcat(buffer,info);
+    }
+
+    strcat(buffer,"\n");
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,addrlen);
+    if(n==-1) /*error*/ exit(1);
     return;
 }
 
@@ -550,9 +638,8 @@ int main(int argc, char **argv) {
                                 // Bid command
                             }
                             else if (strcmp(command, "SRC") == 0) {
-                                // Show Record command
-                            }
-                            else {
+                                show_record_command(buffer);
+                            } else {
                                 snprintf(buffer,sizeof(buffer), "ERR\n");
                                 n=sendto(UDP_fd,buffer,4,0,(struct sockaddr*)&UDP_addr,addrlen);
                                 if(n==-1) /*error*/ exit(1);
