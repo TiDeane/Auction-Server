@@ -364,7 +364,7 @@ void mybids_command(){
         return;
     }
 
-    char LMB_Command[11]="LMB ";
+    char LMB_Command[12]="LMB ";
     int command_length = snprintf(LMB_Command, sizeof(LMB_Command), "LMB %s\n", UID_current);
     n=sendto(UDP_fd,LMB_Command,command_length,0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ exit(1);
@@ -595,7 +595,9 @@ void bid_command(char* token) {
 }
 
 void show_record_command(char *token){
-    char AID[4]; // AID is a 3 digit number
+    char AID[AID_LEN+1];
+    int i;
+
     if ((token = strtok(NULL, " \n")) != NULL)
         strcpy(AID, token);
     else {
@@ -617,57 +619,23 @@ void show_record_command(char *token){
     (struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
 
+    if (buffer[n-1]=='\n')
+        buffer[n]='\0';
+    else
+        return; // error
+
     if (strncmp(buffer, "RRC NOK\n",8) == 0){
-        printf("Auction %s is not active\n", AID);
+        printf("Auction %s does not exist\n", AID);
         return;
     }
     else if(strncmp(buffer,"RRC OK",6) == 0){
-        int bid_amount=0;
-
-        // Moves to the first word after "RRC OK"
-        token = strtok(buffer, " ");
-        token=strtok(NULL," ");
-        token=strtok(NULL," ");
-
-        while(true){
-            while (token != NULL) {
-                printf("%s ", token);
-                token = strtok(NULL, " ");
-                if(strcmp(token,"E")==0 || strcmp(token,"B")==0){
-                    printf("\n");
-                    break;
-                }
-            }
-            while(strcmp(token,"B")==0){
-                bid_amount++;
-                printf("%s ",token); /*B*/
-                token=strtok(NULL," ");
-                printf("%s ",token);/*UID*/
-                token=strtok(NULL," ");
-                printf("%s ", token); /*Value*/
-                token=strtok(NULL," ");
-                printf("%s ",token);/*Date-time*/
-                token=strtok(NULL," ");
-                printf("%s ",token); /*Sec-time*/
-                token=strtok(NULL," ");
-                if(strcmp(token,"E")==0|| bid_amount>50){
-                    printf("\n");
-                    break;
-                }
-            }
-            if(strcmp(token,"E")==0){
-                printf("%s ", token); /*E*/
-                token=strtok(NULL," ");
-                printf("%s ",token);/*start_time*/
-                token=strtok(NULL," ");
-                printf("%s ", token); /*end_time*/
-                
-            }
-            printf("\n");
-            token=strtok(NULL," ");
-            break;
-            
+        for (i = 1; i < n; i++) {
+            if (buffer[i-1] == ' ' && (buffer[i] == 'B'|| buffer[i] == 'E'))
+                buffer[i-1] = '\n';
         }
+
+        char* ptr = buffer + 7;
+        printf("%s",ptr);
         return;
     }
 }

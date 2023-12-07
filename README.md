@@ -6,22 +6,22 @@ It is composed of an Auction Server (AS) and a User Application (User). The AS a
 The AS will be running on a machine with known IP address and ports.
 
 The interface, using the keyboard, allows the _User_ application to control the actions to take:
-- <u>Login</u>. Each user is identified by a _user_ ID _UID_, which is a 6-digit number, and a _password_ composed of 8 alphanumeric (only letters and digits) characters. When the
+- <ins>Login</ins>. Each user is identified by a _user_ ID _UID_, which is a 6-digit number, and a _password_ composed of 8 alphanumeric (only letters and digits) characters. When the
 AS receives a login request it will inform of a successful or incorrect login attempt or, in case the _UID_ was not present at the AS, register a new _user_.
-- <u>Open a new auction</u>. The _User_ application sends a message to the AS asking to open a new auction, providing a short description name (represented with up to 10 alphanumerical characters), an image (or other document file) of the asset to sell, the start value (represented with up to 6 digits), and the duration of the auction in seconds (represented with up to 5 digits). In reply, the AS informs if the request was successful, and the assigned auction identifier, _AID_, a 3-digit number.
-- <u>Close ongoing auction</u>. The _User_ application sends a message to the AS asking to close an ongoing auction, which had been started by the logged in _user_. The AS will reply informing whether the auction was successfully closed, cancelling the sale, or if the auction time had already ended.
-- <u>List auctions started by this user (_myauctions_)</u>. The _User_ application asks the AS for a list of the auctions started by the logged in _user_. The AS will reply with the requested list, or an information that the _user_ has not started any auction.
-- <u>List auctions for which this user made a bid (_mybids_)</u>. The _User_ application asks the AS for a list of the auctions in which the logged in _user_ has placed a bid. The AS will
+- <ins>Open a new auction</ins>. The _User_ application sends a message to the AS asking to open a new auction, providing a short description name (represented with up to 10 alphanumerical characters), an image (or other document file) of the asset to sell, the start value (represented with up to 6 digits), and the duration of the auction in seconds (represented with up to 5 digits). In reply, the AS informs if the request was successful, and the assigned auction identifier, _AID_, a 3-digit number.
+- <ins>Close ongoing auction</ins>. The _User_ application sends a message to the AS asking to close an ongoing auction, which had been started by the logged in _user_. The AS will reply informing whether the auction was successfully closed, cancelling the sale, or if the auction time had already ended.
+- <ins>List auctions started by this user (_myauctions_)</ins>. The _User_ application asks the AS for a list of the auctions started by the logged in _user_. The AS will reply with the requested list, or an information that the _user_ has not started any auction.
+- <ins>List auctions for which this user made a bid (_mybids_)</ins>. The _User_ application asks the AS for a list of the auctions in which the logged in _user_ has placed a bid. The AS will
 reply with the requested list, or an information that the _user_ has not made a bid in any auction.
-- <u>List all auctions</u>. The _User_ application asks the AS for a list of auctions. The AS will reply with the requested list, or an information that no auctions were yet started.
-- <u>Show asset</u>. For an ongoing auction, the _User_ application asks the AS to send the file associated with the asset in sale for specified auction. In reply, the AS sends the
+- <ins>List all auctions</ins>. The _User_ application asks the AS for a list of auctions. The AS will reply with the requested list, or an information that no auctions were yet started.
+- <ins>Show asset</ins>. For an ongoing auction, the _User_ application asks the AS to send the file associated with the asset in sale for specified auction. In reply, the AS sends the
 required file, or an error message. The file is stored, and its name and the directory of storage are displayed to the _user_. Filenames are limited to a total of 24 alphanumerical characters (plus ‘-‘, ‘_’ and ‘.’), including the separating dot and the 3-letter extension: “_nnn…nnnn.xxx_”. The file size is limited to 10 MB, represented using a maximum of 8 digits.
-- <u>Bid</u>. The _User_ application asks the AS to place a bid, with the indicated value, for the selected auction. The AS will reply reporting the result of the bid: accepted, refused (if _value_ is not larger than the previous highest bid), or informing that the auction is no longer active.
-- <u>Show record</u>. The _user_ asks the AS about the record of an auction. The AS will reply with information about the auction, including its name, start value, start time and
+- <ins>Bid</ins>. The _User_ application asks the AS to place a bid, with the indicated value, for the selected auction. The AS will reply reporting the result of the bid: accepted, refused (if _value_ is not larger than the previous highest bid), or informing that the auction is no longer active.
+- <ins>Show record</ins>. The _user_ asks the AS about the record of an auction. The AS will reply with information about the auction, including its name, start value, start time and
 duration, followed by a description of the more recently received bids (up to 50), including the bidder ID, the value and time of the bid, as well as an indication if the auction was finished and when.
-- <u>Logout</u>. The _user_ can ask the AS server to terminate the interaction (logout).
-- <u>Unregister</u>. The user can ask the AS server to unregister this _user_.
-- <u>Exit</u>. The user can ask to exit the _User_ application. If a _user_ is still logged in, then the _User_ application informs the _user_ that the logout command should be executed
+- <ins>Logout</ins>. The _user_ can ask the AS server to terminate the interaction (logout).
+- <ins>Unregister</ins>. The user can ask the AS server to unregister this _user_.
+- <ins>Exit</ins>. The user can ask to exit the _User_ application. If a _user_ is still logged in, then the _User_ application informs the _user_ that the logout command should be executed
 first.
 
 The implementation uses the application layer protocols operating according to the client-server paradigm, using the transport layer services made available by the socket interface. The applications to develop and the supporting communication protocols are specified in the following.
