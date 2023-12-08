@@ -5,6 +5,12 @@
 #define BUFSIZE 6010
 #define MAX_AUCTION 999
 
+typedef struct TCPUserInfo {
+    int accepted_fd;
+    struct sockaddr_in user_addr;
+    socklen_t user_addrlen;
+} TCPUserInfo;
+
 int UDP_fd,TCP_fd,errcode;
 char buffer[BUFSIZE];
 
@@ -78,7 +84,7 @@ int create_login_files(char *UID, char *password) {
     return 0;
 }
 
-void login_command(char *buffer, struct sockaddr_in client_addr_copy) {
+void login_command(char *buffer, struct sockaddr_in user_addr_copy) {
     char UID[UID_LEN+1], password[PW_LEN+1];
     char UID_directory[UID_DIR_PATH_LEN+1];
     char UID_HOST_directory[UID_HOST_DIR_PATH_LEN+1];
@@ -91,13 +97,13 @@ void login_command(char *buffer, struct sockaddr_in client_addr_copy) {
 
     if (!check_UID_format(UID)) {
         char response[] = "RLI ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
     else if (!check_password_format(password)) {
         char response[] = "RLI ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -130,7 +136,7 @@ void login_command(char *buffer, struct sockaddr_in client_addr_copy) {
         }
         
         char response[] = "RLI REG\n"; // New user registered
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else { // User directory already exists
@@ -160,7 +166,7 @@ void login_command(char *buffer, struct sockaddr_in client_addr_copy) {
                 }
 
                 char response[] = "RLI OK\n"; // Successfully logged in
-                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
                 if(n==-1) /*error*/ exit(1);
 
                 fclose(login_file);
@@ -168,7 +174,7 @@ void login_command(char *buffer, struct sockaddr_in client_addr_copy) {
                 return;
             } else { // Password doesn't match
                 char response[] = "RLI NOK\n"; // Unsuccessful login
-                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
                 if(n==-1) /*error*/ exit(1);
 
                 fclose(pass_file);
@@ -181,7 +187,7 @@ void login_command(char *buffer, struct sockaddr_in client_addr_copy) {
             }
 
             char response[] = "RLI REG\n"; // Successfully registered again
-            n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+            n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
             if(n==-1) /*error*/ exit(1);
             return;
         }
@@ -190,7 +196,7 @@ void login_command(char *buffer, struct sockaddr_in client_addr_copy) {
     return;
 }
 
-void logout_command(char* buffer, struct sockaddr_in client_addr_copy) {
+void logout_command(char* buffer, struct sockaddr_in user_addr_copy) {
     char UID[UID_LEN+1], password[PW_LEN+1];
     char UID_directory[UID_DIR_PATH_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
@@ -200,13 +206,13 @@ void logout_command(char* buffer, struct sockaddr_in client_addr_copy) {
 
     if (!check_UID_format(UID)) {
         char response[] = "RLO ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
     else if (!check_password_format(password)) {
         char response[] = "RLO ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -215,7 +221,7 @@ void logout_command(char* buffer, struct sockaddr_in client_addr_copy) {
 
     if (!dir_exists(UID_directory)) { // User directory doesn't exist
         char response[] = "RLO UNR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -226,18 +232,18 @@ void logout_command(char* buffer, struct sockaddr_in client_addr_copy) {
         remove(UID_login_file_path);
 
         char response[] = "RLO OK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else { // User is not logged in
         char response[] = "RLO NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
 }
 
-void unregister_command(char* buffer, struct sockaddr_in client_addr_copy) {
+void unregister_command(char* buffer, struct sockaddr_in user_addr_copy) {
     char UID[UID_LEN+1], password[PW_LEN+1];
     char UID_directory[UID_DIR_PATH_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
@@ -250,7 +256,7 @@ void unregister_command(char* buffer, struct sockaddr_in client_addr_copy) {
 
     if (!dir_exists(UID_directory)) { // User directory does not exist
         char response[] = "RUR UNR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -264,23 +270,29 @@ void unregister_command(char* buffer, struct sockaddr_in client_addr_copy) {
         remove(UID_pass_file_path);
 
         char response[] = "RUR OK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else {
         char response[] = "RUR NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
 }
 
-void open_command(char* buffer, int accepted_fd) {
+void open_command(char* buffer, TCPUserInfo *user_info, int nread) {
     char UID[UID_LEN+1], UID_login_file_path[UID_LOGIN_FILE_LEN+1];
+    char dirname[21];
+    char pathname[32];
     char password[PW_LEN+1];
     char name[MAX_DESC_NAME_LEN+1];
     char fname[MAX_FILENAME+1];
-    int svalue, timeactive, n;
+    char date[DATE_LEN+1], auc_time[TIME_LEN+1];
+    char sfilecontents[UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+                       MAX_DURATION_LEN+DATE_LEN+TIME_LEN+1];
+    char* ptr;
+    int svalue, timeactive, n, nleft, nwritten;
     long fsize;
 
     sscanf(buffer, "%s %s %s %d %d %s %ld ", UID, password, name, &svalue, &timeactive, fname, &fsize);
@@ -288,13 +300,76 @@ void open_command(char* buffer, int accepted_fd) {
     snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) { // User is not logged in
         char response[] = "ROA NLG\n";
-        n=write(accepted_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write(user_info->accepted_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
     }
 
+    sprintf(dirname, "AUCTIONS/%03d/", AID_count);
+    if (mkdir(dirname, 0700) == -1) {
+        perror("mkdir");
+        return;
+    }
+    sprintf(dirname, "AUCTIONS/%03d/BIDS/", AID_count);
+    if (mkdir(dirname, 0700) == -1) {
+        perror("mkdir");
+        return;
+    }
+    sprintf(pathname, "AUCTIONS/%03d/START_%03d.txt", AID_count, AID_count);
+    FILE *start_file = fopen(pathname, "wb");
+    if (start_file == NULL) {
+        perror("Error creating the login file");
+        return;
+    }
+
+    time_t fulltime = time(NULL);
+    sprintf(sfilecontents,"%s %s %s %d %d %s %s %ld",
+            UID,name,fname,svalue,timeactive,date,auc_time,fulltime);
+    fwrite(sfilecontents,1,strlen(sfilecontents),start_file);
+
+    // Moves ptr to the start of the data
+    ptr = buffer;
+    int name_len = strlen(name);
+    int fname_len = strlen(fname);
+    int svalue_len = snprintf(NULL, 0, "%d", svalue);
+    int timeactive_len = snprintf(NULL, 0, "%d", timeactive);
+    int fsize_len = snprintf(NULL, 0, "%ld", fsize);
+    ptr += UID_LEN+PW_LEN+name_len+fname_len+svalue_len+timeactive_len+fsize_len+0; // Points to start of data
+
+    FILE *file = fopen(fname, "wb");
+    if (file == NULL) {
+        perror("Error opening the file");
+        remove(dirname);
+        return;
+    }
+
+    ssize_t data_received;
+
+    if (fsize > (nread - fname_len - fsize_len - 2))
+        data_received = nread - fname_len - fsize_len - 2;
+    else
+        data_received = fsize;
+
+    nwritten = fwrite(ptr, 1, data_received, file);
+
+    nleft = fsize - nwritten;
+
+    while (nleft > 0){
+        if (nleft > BUFSIZE)
+            nread = read(TCP_fd, buffer, BUFSIZE);
+        else
+            nread = read(TCP_fd, buffer, nleft);
+
+        if (nread == -1) /*error*/ return;
+        else if (nread == 0)
+            break;//closed by peer
+
+        nwritten += fwrite(buffer, 1, nread, file);
+
+        nleft -= nread;
+    }
 }
 
-void myauctions_command(char* buffer, struct sockaddr_in client_addr_copy) {
+void myauctions_command(char* buffer, struct sockaddr_in user_addr_copy) {
     struct dirent **filelist;
     int n, n_entries, i, len;
     char AID[AID_LEN+1];
@@ -308,7 +383,7 @@ void myauctions_command(char* buffer, struct sockaddr_in client_addr_copy) {
     sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) {
         char response[] = "RMA NLG\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -319,7 +394,7 @@ void myauctions_command(char* buffer, struct sockaddr_in client_addr_copy) {
         free(filelist[0]); // "."
         free(filelist[1]); // ".."
         char response[] = "RMA NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else if (n_entries<=0)
@@ -346,13 +421,13 @@ void myauctions_command(char* buffer, struct sockaddr_in client_addr_copy) {
     free(filelist);
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
     if(n==-1) /*error*/ exit(1);
 
     return;
 }
 
-void mybids_command(char* buffer, struct sockaddr_in client_addr_copy) {
+void mybids_command(char* buffer, struct sockaddr_in user_addr_copy) {
     struct dirent **filelist;
     int n, n_entries, i, len;
     char AID[AID_LEN+1];
@@ -366,7 +441,7 @@ void mybids_command(char* buffer, struct sockaddr_in client_addr_copy) {
     sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) {
         char response[] = "RMB NLG\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -377,7 +452,7 @@ void mybids_command(char* buffer, struct sockaddr_in client_addr_copy) {
         free(filelist[0]); // "."
         free(filelist[1]); // ".."
         char response[] = "RMB NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else if (n_entries<=0)
@@ -404,13 +479,13 @@ void mybids_command(char* buffer, struct sockaddr_in client_addr_copy) {
     free(filelist);
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
     if(n==-1) /*error*/ exit(1);
 
     return;
 }
 
-void list_command(char* buffer, struct sockaddr_in client_addr_copy) {
+void list_command(char* buffer, struct sockaddr_in user_addr_copy) {
     struct dirent **filelist;
     int n, n_entries, i, len;
     char AID[AID_LEN+1];
@@ -425,7 +500,7 @@ void list_command(char* buffer, struct sockaddr_in client_addr_copy) {
         free(filelist[1]); // ".."
         free(filelist[2]); // ".gitkeep"
         char response[] = "RLS NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else if (n_entries<=0)
@@ -452,13 +527,13 @@ void list_command(char* buffer, struct sockaddr_in client_addr_copy) {
     free(filelist);
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
     if(n==-1) /*error*/ exit(1);
 
     return;
 }
 
-void show_record_command(char* buffer, struct sockaddr_in client_addr_copy) {
+void show_record_command(char* buffer, struct sockaddr_in user_addr_copy) {
     struct dirent **bidlist;
     int n, n_bids, len, bids_read = 0;
     char UID[UID_LEN+1];
@@ -520,7 +595,7 @@ void show_record_command(char* buffer, struct sockaddr_in client_addr_copy) {
         free(bidlist);
     } else { // Auction directory doesn't exist
         char response[] = "RRC NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -540,7 +615,7 @@ void show_record_command(char* buffer, struct sockaddr_in client_addr_copy) {
     }
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
     if(n==-1) /*error*/ exit(1);
     return;
 }
@@ -644,31 +719,31 @@ int main(int argc, char **argv) {
 
                         if((pid=fork())==-1) /*error*/ exit(1);
                         else if (pid==0) { // Child process
-                            struct sockaddr_in client_addr_copy = UDP_addr;
+                            struct sockaddr_in user_addr_copy = UDP_addr;
 
                             if (strcmp(command, "LIN") == 0) {
-                                login_command(buffer, client_addr_copy);
+                                login_command(buffer, user_addr_copy);
                             }
                             else if (strcmp(command, "LOU") == 0) {
-                                logout_command(buffer, client_addr_copy);
+                                logout_command(buffer, user_addr_copy);
                             }
                             else if (strcmp(command, "UNR") == 0) {
-                                unregister_command(buffer, client_addr_copy);
+                                unregister_command(buffer, user_addr_copy);
                             }
                             else if (strcmp(command, "LMA") == 0) {
-                                myauctions_command(buffer, client_addr_copy);
+                                myauctions_command(buffer, user_addr_copy);
                             }
                             else if (strcmp(command, "LMB") == 0) {
-                                mybids_command(buffer, client_addr_copy);
+                                mybids_command(buffer, user_addr_copy);
                             }
                             else if (strcmp(command, "LST") == 0) {
-                                list_command(buffer, client_addr_copy);
+                                list_command(buffer, user_addr_copy);
                             }
                             else if (strcmp(command, "SRC") == 0) {
-                                show_record_command(buffer, client_addr_copy);
+                                show_record_command(buffer, user_addr_copy);
                             } else {
                                 char response[] = "ERR\n";
-                                n=sendto(UDP_fd,response,4,0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
+                                n=sendto(UDP_fd,response,4,0,(struct sockaddr*)&user_addr_copy,sizeof(user_addr_copy));
                                 if(n==-1) /*error*/ exit(1);
                             }
                             exit(0); // Ends child process
@@ -677,6 +752,8 @@ int main(int argc, char **argv) {
                 }
                 if(FD_ISSET(TCP_fd,&testfds)) // Received from TCP
                 {
+                    struct sockaddr_in TCP_addr;
+                    socklen_t TCP_addrlen = sizeof(TCP_addr);
                     int accepted_fd;
                     if((accepted_fd=accept(TCP_fd,(struct sockaddr*)&TCP_addr,&TCP_addrlen))==-1)
                         /*error*/exit(1);
@@ -691,8 +768,15 @@ int main(int argc, char **argv) {
 
                         if((pid=fork())==-1) /*error*/ exit(1);
                         else if (pid==0) { // Child process
+                            TCPUserInfo *user_info = malloc(sizeof(TCPUserInfo));
+                            if (user_info == NULL)
+                                exit(1);
+                            user_info->accepted_fd = accepted_fd;
+                            user_info->user_addr = TCP_addr;
+                            user_info->user_addrlen = TCP_addrlen;
+
                             if (strcmp(command, "OPA") == 0) {
-                                open_command(buffer, accepted_fd);
+                                open_command(buffer, user_info, n);
                             }
                             else if (strcmp(command, "CLS") == 0) {
                                 // Close command
@@ -707,6 +791,7 @@ int main(int argc, char **argv) {
                                 //write to TCP_fd
                                 //if(n==-1) /*error*/ exit(1);
                             }
+                            free(user_info);
                             exit(0); // Ends child process
                         }
                         do n=close(accepted_fd);while(n==-1&&errno==EINTR);
