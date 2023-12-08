@@ -16,6 +16,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <signal.h>
+#include <errno.h>
 
 #define MAX_FILENAME 24
 #define AID_LEN 3

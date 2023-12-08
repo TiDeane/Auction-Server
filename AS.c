@@ -5,16 +5,16 @@
 #define BUFSIZE 6010
 #define MAX_AUCTION 999
 
-int UDP_fd,TCP_fd,errcode,n;
+int UDP_fd,TCP_fd,errcode;
 char buffer[BUFSIZE];
 
 int AID_count = 1;
 
-socklen_t addrlen;
+socklen_t addrlen, TCP_addrlen;
 struct addrinfo hints,*res;
 struct sockaddr_in UDP_addr;
-//struct addrinfo TCP_hints,*TCP_res;
-//struct sockaddr_in TCP_addr;
+struct addrinfo TCP_hints,*TCP_res;
+struct sockaddr_in TCP_addr;
 
 bool verbose_mode = false;
 
@@ -78,25 +78,26 @@ int create_login_files(char *UID, char *password) {
     return 0;
 }
 
-void login_command(char *buffer) {
+void login_command(char *buffer, struct sockaddr_in client_addr_copy) {
     char UID[UID_LEN+1], password[PW_LEN+1];
     char UID_directory[UID_DIR_PATH_LEN+1];
     char UID_HOST_directory[UID_HOST_DIR_PATH_LEN+1];
     char UID_BID_directory[UID_BID_DIR_PATH_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
     char UID_pass_file_path[UID_PASS_FILE_LEN+1];
+    int n;
 
     sscanf(buffer, "LIN %s %s\n", UID, password);
 
     if (!check_UID_format(UID)) {
         char response[] = "RLI ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
     else if (!check_password_format(password)) {
         char response[] = "RLI ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -129,7 +130,7 @@ void login_command(char *buffer) {
         }
         
         char response[] = "RLI REG\n"; // New user registered
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else { // User directory already exists
@@ -159,7 +160,7 @@ void login_command(char *buffer) {
                 }
 
                 char response[] = "RLI OK\n"; // Successfully logged in
-                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
                 if(n==-1) /*error*/ exit(1);
 
                 fclose(login_file);
@@ -167,7 +168,7 @@ void login_command(char *buffer) {
                 return;
             } else { // Password doesn't match
                 char response[] = "RLI NOK\n"; // Unsuccessful login
-                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
                 if(n==-1) /*error*/ exit(1);
 
                 fclose(pass_file);
@@ -180,7 +181,7 @@ void login_command(char *buffer) {
             }
 
             char response[] = "RLI REG\n"; // Successfully registered again
-            n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+            n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
             if(n==-1) /*error*/ exit(1);
             return;
         }
@@ -189,22 +190,23 @@ void login_command(char *buffer) {
     return;
 }
 
-void logout_command(char* buffer) {
+void logout_command(char* buffer, struct sockaddr_in client_addr_copy) {
     char UID[UID_LEN+1], password[PW_LEN+1];
     char UID_directory[UID_DIR_PATH_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
+    int n;
 
     sscanf(buffer, "LOU %s %s\n", UID, password);
 
     if (!check_UID_format(UID)) {
         char response[] = "RLO ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
     else if (!check_password_format(password)) {
         char response[] = "RLO ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -213,7 +215,7 @@ void logout_command(char* buffer) {
 
     if (!dir_exists(UID_directory)) { // User directory doesn't exist
         char response[] = "RLO UNR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -224,22 +226,23 @@ void logout_command(char* buffer) {
         remove(UID_login_file_path);
 
         char response[] = "RLO OK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else { // User is not logged in
         char response[] = "RLO NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
 }
 
-void unregister_command(char* buffer) {
+void unregister_command(char* buffer, struct sockaddr_in client_addr_copy) {
     char UID[UID_LEN+1], password[PW_LEN+1];
     char UID_directory[UID_DIR_PATH_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
     char UID_pass_file_path[UID_PASS_FILE_LEN+1];
+    int n;
 
     sscanf(buffer, "UNR %s %s\n", UID, password);
 
@@ -247,7 +250,7 @@ void unregister_command(char* buffer) {
 
     if (!dir_exists(UID_directory)) { // User directory does not exist
         char response[] = "RUR UNR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -261,20 +264,39 @@ void unregister_command(char* buffer) {
         remove(UID_pass_file_path);
 
         char response[] = "RUR OK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else {
         char response[] = "RUR NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
 }
 
-void myauctions_command(char* buffer) {
+void open_command(char* buffer, int accepted_fd) {
+    char UID[UID_LEN+1], UID_login_file_path[UID_LOGIN_FILE_LEN+1];
+    char password[PW_LEN+1];
+    char name[MAX_DESC_NAME_LEN+1];
+    char fname[MAX_FILENAME+1];
+    int svalue, timeactive, n;
+    long fsize;
+
+    sscanf(buffer, "%s %s %s %d %d %s %ld ", UID, password, name, &svalue, &timeactive, fname, &fsize);
+    
+    snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
+    if (!file_exists(UID_login_file_path)) { // User is not logged in
+        char response[] = "ROA NLG\n";
+        n=write(accepted_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+    }
+
+}
+
+void myauctions_command(char* buffer, struct sockaddr_in client_addr_copy) {
     struct dirent **filelist;
-    int n_entries, i, len;
+    int n, n_entries, i, len;
     char AID[AID_LEN+1];
     char UID[UID_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
@@ -286,7 +308,7 @@ void myauctions_command(char* buffer) {
     sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) {
         char response[] = "RMA NLG\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -297,7 +319,7 @@ void myauctions_command(char* buffer) {
         free(filelist[0]); // "."
         free(filelist[1]); // ".."
         char response[] = "RMA NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else if (n_entries<=0)
@@ -324,15 +346,15 @@ void myauctions_command(char* buffer) {
     free(filelist);
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,addrlen);
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
     if(n==-1) /*error*/ exit(1);
 
     return;
 }
 
-void mybids_command(char* buffer) {
+void mybids_command(char* buffer, struct sockaddr_in client_addr_copy) {
     struct dirent **filelist;
-    int n_entries, i, len;
+    int n, n_entries, i, len;
     char AID[AID_LEN+1];
     char UID[UID_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
@@ -344,7 +366,7 @@ void mybids_command(char* buffer) {
     sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) {
         char response[] = "RMB NLG\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -355,7 +377,7 @@ void mybids_command(char* buffer) {
         free(filelist[0]); // "."
         free(filelist[1]); // ".."
         char response[] = "RMB NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else if (n_entries<=0)
@@ -382,15 +404,15 @@ void mybids_command(char* buffer) {
     free(filelist);
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,addrlen);
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
     if(n==-1) /*error*/ exit(1);
 
     return;
 }
 
-void list_command(char* buffer) {
+void list_command(char* buffer, struct sockaddr_in client_addr_copy) {
     struct dirent **filelist;
-    int n_entries, i, len;
+    int n, n_entries, i, len;
     char AID[AID_LEN+1];
     char dirname[10];
     char pathname[32];
@@ -403,7 +425,7 @@ void list_command(char* buffer) {
         free(filelist[1]); // ".."
         free(filelist[2]); // ".gitkeep"
         char response[] = "RLS NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     } else if (n_entries<=0)
@@ -430,15 +452,15 @@ void list_command(char* buffer) {
     free(filelist);
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,addrlen);
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
     if(n==-1) /*error*/ exit(1);
 
     return;
 }
 
-void show_record_command(char* buffer) {
+void show_record_command(char* buffer, struct sockaddr_in client_addr_copy) {
     struct dirent **bidlist;
-    int n_bids, len, bids_read = 0;
+    int n, n_bids, len, bids_read = 0;
     char UID[UID_LEN+1];
     char AID[AID_LEN+1];
     char dirname[13];
@@ -498,7 +520,7 @@ void show_record_command(char* buffer) {
         free(bidlist);
     } else { // Auction directory doesn't exist
         char response[] = "RRC NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,addrlen);
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -518,7 +540,7 @@ void show_record_command(char* buffer) {
     }
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,addrlen);
+    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
     if(n==-1) /*error*/ exit(1);
     return;
 }
@@ -528,7 +550,7 @@ int main(int argc, char **argv) {
     fd_set inputs, testfds;
     struct timeval timeout;
 
-    int out_fds, ret;
+    int out_fds, ret, n;
 
     char in_str[128];
     char command[4];
@@ -564,23 +586,26 @@ int main(int argc, char **argv) {
     }
     freeaddrinfo(res);
 
+    TCP_fd=socket(AF_INET,SOCK_STREAM,0);
+    if (TCP_fd==-1) /*error*/ exit(1);
+
+    memset(&TCP_hints,0,sizeof TCP_hints);
+    TCP_hints.ai_family=AF_INET;//IPv4
+    TCP_hints.ai_socktype=SOCK_STREAM;//TCP socket
+    TCP_hints.ai_flags=AI_PASSIVE;
+    
+    errcode=getaddrinfo(NULL,ASport,&TCP_hints,&TCP_res);
+    if (errcode!=0) /*error*/ exit(1);
+
+    if(bind(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen) == -1)
+        exit(1); //error
+    
+    if(listen(TCP_fd,5)==-1)/*error*/exit(1);
+
     FD_ZERO(&inputs); // Clear input mask
     FD_SET(0,&inputs); // Set standard input channel on
     FD_SET(UDP_fd,&inputs); // Set UDP channel on
-
-    /*TCP_fd=socket(AF_INET,SOCK_STREAM,0);
-    if (TCP_fd==-1) /error/ exit(1);
-
-    memset(&TCP_hints,0,sizeof hints);
-    TCP_hints.ai_family=AF_INET;//IPv4
-    TCP_hints.ai_socktype=SOCK_STREAM;//UDP socket
-    TCP_hints.ai_flags=AI_PASSIVE;
-    
-    errcode=getaddrinfo(NULL,ASport,&hints,&res);
-    if (errcode!=0) /error/ exit(1);
-
-    if(bind(TCP_fd,res->ai_addr,res->ai_addrlen) == -1)
-        exit(1); //error*/
+    FD_SET(TCP_fd,&inputs); // Set TCP channel on
 
     while(1)
     {
@@ -619,51 +644,81 @@ int main(int argc, char **argv) {
 
                         if((pid=fork())==-1) /*error*/ exit(1);
                         else if (pid==0) { // Child process
+                            struct sockaddr_in client_addr_copy = UDP_addr;
+
                             if (strcmp(command, "LIN") == 0) {
-                                login_command(buffer);
+                                login_command(buffer, client_addr_copy);
                             }
                             else if (strcmp(command, "LOU") == 0) {
-                                logout_command(buffer);
+                                logout_command(buffer, client_addr_copy);
                             }
                             else if (strcmp(command, "UNR") == 0) {
-                                unregister_command(buffer);
-                            }
-                            else if (strcmp(command, "OPA") == 0) {
-                                // Open command
-                            }
-                            else if (strcmp(command, "CLS") == 0) {
-                                // Close command
+                                unregister_command(buffer, client_addr_copy);
                             }
                             else if (strcmp(command, "LMA") == 0) {
-                                myauctions_command(buffer);
+                                myauctions_command(buffer, client_addr_copy);
                             }
                             else if (strcmp(command, "LMB") == 0) {
-                                mybids_command(buffer);
+                                mybids_command(buffer, client_addr_copy);
                             }
                             else if (strcmp(command, "LST") == 0) {
-                                list_command(buffer);
-                            }
-                            else if (strcmp(command, "SAS") == 0) {
-                                // Show Asset command
-                            }
-                            else if (strcmp(command, "BID") == 0) {
-                                // Bid command
+                                list_command(buffer, client_addr_copy);
                             }
                             else if (strcmp(command, "SRC") == 0) {
-                                show_record_command(buffer);
+                                show_record_command(buffer, client_addr_copy);
                             } else {
-                                snprintf(buffer,sizeof(buffer), "ERR\n");
-                                n=sendto(UDP_fd,buffer,4,0,(struct sockaddr*)&UDP_addr,addrlen);
+                                char response[] = "ERR\n";
+                                n=sendto(UDP_fd,response,4,0,(struct sockaddr*)&client_addr_copy,sizeof(client_addr_copy));
                                 if(n==-1) /*error*/ exit(1);
                             }
                             exit(0); // Ends child process
                         }
                     }
                 }
+                if(FD_ISSET(TCP_fd,&testfds)) // Received from TCP
+                {
+                    int accepted_fd;
+                    if((accepted_fd=accept(TCP_fd,(struct sockaddr*)&TCP_addr,&TCP_addrlen))==-1)
+                        /*error*/exit(1);
+                    n=read(accepted_fd,buffer,BUFSIZE); // Read multiple times?
+                    if(n==-1)/*error*/exit(1);
+
+                    if(n>=0) {
+                        if(strlen(buffer)>0)
+                            buffer[n-1]=0;
+                        
+                        sscanf(buffer, "%s ", command);
+
+                        if((pid=fork())==-1) /*error*/ exit(1);
+                        else if (pid==0) { // Child process
+                            if (strcmp(command, "OPA") == 0) {
+                                open_command(buffer, accepted_fd);
+                            }
+                            else if (strcmp(command, "CLS") == 0) {
+                                // Close command
+                            }
+                            else if (strcmp(command, "SAS") == 0) {
+                                // Show Asset command
+                            }
+                            else if (strcmp(command, "BID") == 0) {
+                                // Bid command
+                            } else {
+                                snprintf(buffer,sizeof(buffer), "ERR\n");
+                                //write to TCP_fd
+                                //if(n==-1) /*error*/ exit(1);
+                            }
+                            exit(0); // Ends child process
+                        }
+                        do n=close(accepted_fd);while(n==-1&&errno==EINTR);
+                        if(n==-1)/*error*/exit(1);
+                    }
+                }
         }
     }
+    freeaddrinfo(TCP_res);
     freeaddrinfo(res);
     close(UDP_fd);
+    close(TCP_fd);
 
     return 0;
 }
