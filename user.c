@@ -17,8 +17,8 @@ char buffer[BUFSIZE];
 char* ASIP = (char*) "127.0.0.1";
 char* ASport = (char*) PORT;
 
-char UID_current[7];
-char password_current[9];
+char UID_current[UID_LEN+1];
+char password_current[PW_LEN+1];
 bool logged_in = false;
 
 /* Logs into the Auction Server. Command format is "login UID password" */
@@ -247,7 +247,7 @@ void open_command(char* token) {
     sscanf(buffer, "ROA %s %d\n", status, &AID);
     
     if (strcmp(status, "OK") == 0) {
-        printf("Auction [%d] successfully created\n", AID);
+        printf("Auction [%03d] successfully created\n", AID);
         return;
     }
     else if (strcmp(status, "NOK") == 0) {
@@ -475,7 +475,8 @@ void sas_command(char* token) {
 
         int fsize_len = snprintf(NULL, 0, "%ld", fsize);
         int fname_len = strlen(fname);
-        ptr += fname_len + fsize_len + 2; // Points to start of data
+        int data_start = fname_len + fsize_len + 2;
+        ptr += data_start; // Points to start of data
 
         FILE *file = fopen(fname, "wb");
         if (file == NULL) {
@@ -486,8 +487,8 @@ void sas_command(char* token) {
 
         ssize_t data_received;
 
-        if (fsize > (nread - fname_len - fsize_len - 2))
-            data_received = nread - fname_len - fsize_len - 2;
+        if (fsize > (nread - data_start))
+            data_received = nread - data_start;
         else
             data_received = fsize;
 
