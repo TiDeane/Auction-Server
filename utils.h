@@ -17,6 +17,7 @@
 #include <dirent.h>
 #include <signal.h>
 #include <errno.h>
+#include <time.h>
 
 #define MAX_FILENAME 24
 #define AID_LEN 3
