@@ -30,6 +30,7 @@
 #define TIME_LEN 8
 #define MAX_FULLTIME 10
 #define BID_LEN 6
+#define MAX_AUCTIONS 999
 
 #define UID_DIR_PATH_LEN (UID_LEN+6) // USERS/(uid)
 #define UID_HOST_DIR_PATH_LEN (UID_DIR_PATH_LEN+7) // USERS/(uid)/HOSTED

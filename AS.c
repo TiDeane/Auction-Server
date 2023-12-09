@@ -152,7 +152,7 @@ void login_command(char *buffer) {
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
         return;
-    } else { // User directory already exists
+    } else { // User directory already exists, has registered before
 
         snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
         snprintf(UID_pass_file_path, sizeof(UID_pass_file_path), "USERS/%s/%s_pass.txt", UID, UID);
@@ -318,16 +318,21 @@ void open_command(char* buffer, int new_fd, int nread) {
         return;
     }
 
-    AID = get_new_AID();    
+    AID = get_new_AID(); 
+    if (AID > MAX_AUCTIONS) { 
+        char response[] = "ROA NOK\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
+
     sprintf(dirname, "AUCTIONS/%03d/", AID);
     if (mkdir(dirname, 0700) == -1) {
-        printf("Auction %d's folder already exists\n", AID);
         perror("mkdir");
         return;
     }
     sprintf(dirname, "AUCTIONS/%03d/BIDS/", AID);
     if (mkdir(dirname, 0700) == -1) {
-        printf("Auction %d's BIDS folder already exists\n", AID);
         sprintf(dirname, "AUCTIONS/%03d/", AID);
         remove(dirname);
         perror("mkdir");
@@ -352,6 +357,16 @@ void open_command(char* buffer, int new_fd, int nread) {
     sprintf(sfilecontents,"%s %s %s %d %d %s %ld",
             UID,name,fname,svalue,timeactive,date_time,fulltime);
     fwrite(sfilecontents,1,strlen(sfilecontents),start_file);
+
+    sprintf(pathname,"USERS/%s/HOSTED/%03d.txt", UID, AID);
+    FILE *hosted_file = fopen(pathname, "w");
+    if (hosted_file == NULL) {
+        sprintf(dirname, "AUCTIONS/%03d/", AID);
+        remove(dirname);
+        perror("Error creating the login file");
+        return;
+    }
+
 
     // Moves ptr to the start of the data
     ptr = buffer;
@@ -405,8 +420,115 @@ void open_command(char* buffer, int new_fd, int nread) {
     n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
     if(n==-1)/*error*/exit(1);
 
-    close(new_fd);
     return;
+}
+
+void close_command(char* buffer, int new_fd) {
+    char UID[UID_LEN+1];
+    char password[PW_LEN+1];
+    char name[MAX_DESC_NAME_LEN+1];
+    char fname[MAX_FILENAME+1];
+    char dirname[21];
+    char pathname[32];
+    char sdate[DATE_LEN+1], stime[TIME_LEN+1], end_datetime[DATE_LEN+TIME_LEN+2];
+    long stime_seconds, end_sec_time;
+    int AID, n, svalue, timeactive;
+    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+                     MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
+
+    sscanf(buffer,"CLS %s %s %d\n", UID, password, &AID);
+
+    sprintf(dirname, "USERS/%s/", UID);
+    if (!dir_exists(dirname)) {
+        char response[] = "RCL NOK\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
+
+    sprintf(pathname,"USERS/%s/%s_pass.txt",UID,UID);
+    FILE *pass_file = fopen(pathname, "r");
+    if (pass_file == NULL) {
+        perror("Error creating the password file");
+        return;
+    }
+    fgets(buffer, 10, pass_file); // Reads saved password into the buffer
+    if (strncmp(buffer,password,PW_LEN) != 0) { // If password doesn't match
+        fclose(pass_file);
+        char response[] = "RCL NOK\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
+    fclose(pass_file);
+
+    sprintf(pathname,"USERS/%s/%s_login.txt",UID,UID);
+    if (!file_exists(pathname)) {
+        char response[] = "RCL NLG\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
+    sprintf(dirname, "AUCTIONS/%03d/", AID);
+    if (!dir_exists(dirname)) {
+        char response[] = "RCL EAU\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
+
+    sprintf(pathname, "AUCTIONS/%03d/START_%03d.txt",AID,AID);
+    FILE *start_file = fopen(pathname, "r");
+    if (start_file == NULL) {
+        perror("Error creating the password file");
+        return;
+    }
+    fgets(buffer, start_size, start_file);
+    //TODO: check timeactive and see if END needs to be created
+    if (strncmp(buffer,UID,UID_LEN) != 0) {
+        fclose(start_file);
+        char response[] = "RCL EOW\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
+    fclose(start_file);
+
+    sprintf(pathname, "AUCTIONS/%03d/END_%03d.txt",AID,AID);
+    if (file_exists(pathname)) { // Auction has already ended
+        char response[] = "RCL END\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    } else {
+        FILE *end_file = fopen(pathname, "w");
+        if (end_file == NULL) {
+            perror("Error creating the password file");
+            return;
+        }
+
+        time_t current_time = time(NULL);
+        struct tm *timeinfo = gmtime(&current_time);
+        if (timeinfo != NULL)
+            strftime(end_datetime, sizeof(end_datetime), "%Y-%m-%d %H:%M:%S", timeinfo);
+        else
+            return;
+        
+        sscanf(buffer,"%s %s %s %d %d %s %s %ld",UID,name,fname,&svalue,&timeactive,sdate,stime,&stime_seconds);
+        end_sec_time = (long)(current_time - (time_t)stime_seconds);
+        printf("first method end_sec_time: %ld\n",end_sec_time);
+        end_sec_time = difftime(current_time,(time_t)stime_seconds);
+        printf("second method end_sec_time: %ld\n",end_sec_time);
+
+        sprintf(buffer,"%s %ld",end_datetime,end_sec_time);
+        fwrite(buffer,1,strlen(buffer),end_file);
+
+        fclose(end_file);
+        char response[] = "RCL OK\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
 }
 
 void myauctions_command(char* buffer) {
@@ -811,7 +933,7 @@ int main(int argc, char **argv) {
                                 open_command(buffer, new_fd, n);
                             }
                             else if (strcmp(command, "CLS") == 0) {
-                                // Close command
+                                close_command(buffer, new_fd);
                             }
                             else if (strcmp(command, "SAS") == 0) {
                                 // Show Asset command
@@ -823,6 +945,7 @@ int main(int argc, char **argv) {
                                 //write to TCP_fd
                                 //if(n==-1) /*error*/ exit(1);
                             }
+                            close(new_fd);
                             exit(0); // Ends child process
                         }
                         do n=close(new_fd);while(n==-1&&errno==EINTR);

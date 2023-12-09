@@ -59,8 +59,8 @@ bool check_desc_name_format(char *name) {
 }
 
 bool file_exists (char *filename) {
-  struct stat buffer;   
-  return (stat (filename, &buffer) == 0);
+  struct stat info;   
+  return (stat (filename, &info) == 0);
 }
 
 bool dir_exists (char *dirpath) {
