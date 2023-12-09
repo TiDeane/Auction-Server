@@ -367,7 +367,6 @@ void open_command(char* buffer, int new_fd, int nread) {
         return;
     }
 
-
     // Moves ptr to the start of the data
     ptr = buffer;
     int name_len = strlen(name);
@@ -485,7 +484,7 @@ void close_command(char* buffer, int new_fd) {
     }
     fgets(buffer, start_size, start_file);
     //TODO: check timeactive and see if END needs to be created
-    if (strncmp(buffer,UID,UID_LEN) != 0) {
+    if (strncmp(buffer,UID,UID_LEN) != 0) { // Auction is not owned by given UID
         fclose(start_file);
         char response[] = "RCL EOW\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
@@ -515,11 +514,7 @@ void close_command(char* buffer, int new_fd) {
             return;
         
         sscanf(buffer,"%s %s %s %d %d %s %s %ld",UID,name,fname,&svalue,&timeactive,sdate,stime,&stime_seconds);
-        end_sec_time = (long)(current_time - (time_t)stime_seconds);
-        printf("first method end_sec_time: %ld\n",end_sec_time);
         end_sec_time = difftime(current_time,(time_t)stime_seconds);
-        printf("second method end_sec_time: %ld\n",end_sec_time);
-
         sprintf(buffer,"%s %ld",end_datetime,end_sec_time);
         fwrite(buffer,1,strlen(buffer),end_file);
 
@@ -529,6 +524,71 @@ void close_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
         return;
     }
+}
+
+void show_asset_command(char* buffer, int new_fd) {
+    char pathname[46];
+    char UID[UID_LEN+1];
+    char name[MAX_DESC_NAME_LEN+1];
+    char fname[MAX_FILENAME+1];
+    int AID, n, command_length;
+    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+                     MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
+
+    sscanf(buffer, "SAS %d\n", &AID);
+
+    sprintf(pathname,"AUCTIONS/%03d/START_%03d.txt",AID,AID);
+    FILE *start_file = fopen(pathname, "r");
+    if (start_file == NULL) {
+        perror("Error opening the START file");
+        return;
+    }
+    fgets(buffer,start_size,start_file);
+    sscanf(buffer,"%s %s %s ",UID,name,fname);
+    fclose(start_file);
+
+    sprintf(pathname,"AUCTIONS/%03d/%s",AID,fname);
+    if (!file_exists(pathname)) {
+        char response[] = "RSA NOK\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+    FILE *file = fopen(pathname, "rb");
+    if (file == NULL) {
+        perror("Error opening the file");
+        return;
+    }
+
+    struct stat file_info;
+    int file_fd = fileno(file);
+    if (fstat(file_fd, &file_info) != 0) {
+        fclose(file);
+        perror("Error getting file information");
+        return;
+    }
+    long Fsize = file_info.st_size;
+    if (Fsize > 99999999) {
+        printf("File size is too large\n");
+        fclose(file);
+        return;
+    }
+
+    command_length = sprintf(buffer, "RSA OK %s %ld ", fname, Fsize);
+    n=write(new_fd,buffer,command_length); // TODO: Do multiple writes to guarantee
+    if(n==-1)/*error*/exit(1);
+
+    off_t offset = 0;
+    ssize_t bytes_sent;
+    while (offset < Fsize) {
+        bytes_sent = sendfile(new_fd, file_fd, &offset, Fsize - offset);
+        if (bytes_sent == -1) {
+            perror("Error sending file content");
+            fclose(file);
+            return;
+        }
+    }
+    fclose(file);
 }
 
 void myauctions_command(char* buffer) {
@@ -936,7 +996,7 @@ int main(int argc, char **argv) {
                                 close_command(buffer, new_fd);
                             }
                             else if (strcmp(command, "SAS") == 0) {
-                                // Show Asset command
+                                show_asset_command(buffer, new_fd);
                             }
                             else if (strcmp(command, "BID") == 0) {
                                 // Bid command
