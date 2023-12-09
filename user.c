@@ -187,7 +187,6 @@ void open_command(char* token) {
         return;
     }
     
-    // Get file size using fstat
     struct stat file_info;
     int file_fd = fileno(file);
     if (fstat(file_fd, &file_info) != 0) {
@@ -421,7 +420,10 @@ void list_command() {
 }
 
 /* Shows an auction's asset. Command format is "show_asset AID" or "sa AID" */
-void sas_command(char* token) {
+void show_asset_command(char* token) {
+    char fname[MAX_FILENAME+1], *ptr;
+    long fsize;
+    ssize_t nleft,nwritten,nread;
 
     char AID[4]; // AID is a 3 digit number
     if ((token = strtok(NULL, " \n")) != NULL)
@@ -450,11 +452,13 @@ void sas_command(char* token) {
     n=write(TCP_fd,SAS_command,8); // TODO: Do multiple writes to guarantee
     if(n==-1)/*error*/exit(1);
 
-    n=read(TCP_fd,buffer,BUFSIZE); // Reads the command and status
+    bzero(buffer,BUFSIZE);
+
+    nread=read(TCP_fd,buffer,BUFSIZE);
     if(n==-1)/*error*/exit(1);
 
     char status[4];
-    sscanf(buffer, "RSA %3s", status);
+    sscanf(buffer, "RSA %3s %s %ld", status, fname, &fsize);
 
     if (strcmp(status, "NOK") == 0) {
         printf("There is no file to be sent, or a problem ocurred\n");
@@ -462,20 +466,11 @@ void sas_command(char* token) {
         return;
     }
     else if (strcmp(status, "OK") == 0) {
-        char fname[MAX_FILENAME+1], *ptr;
-        long fsize;
-        ssize_t nleft,nwritten,nread;
-
-        nread = read(TCP_fd,buffer,BUFSIZE); // Reads file name, size and data
-        if (nread == -1)/*error*/exit(1);
-
         ptr = buffer;
-        
-        sscanf(buffer, "%s %ld ", fname, &fsize); // TODO: VERIFY IF RESPONSE FORMAT IS CORRECT
 
         int fsize_len = snprintf(NULL, 0, "%ld", fsize);
         int fname_len = strlen(fname);
-        int data_start = fname_len + fsize_len + 2;
+        int data_start = fname_len + fsize_len + 9;
         ptr += data_start; // Points to start of data
 
         FILE *file = fopen(fname, "wb");
@@ -492,7 +487,10 @@ void sas_command(char* token) {
         else
             data_received = fsize;
 
-        nwritten = fwrite(ptr, 1, data_received, file);
+        if (data_received>0)
+            nwritten = fwrite(ptr, 1, data_received, file);
+        else
+            nwritten = 0;
 
         nleft = fsize - nwritten;
 
@@ -697,7 +695,7 @@ int main(int argc, char **argv) {
             list_command();
         }
         else if (token != NULL && (strcmp(token, "show_asset") == 0 || strcmp(token, "sa") == 0)) {
-            sas_command(token);
+            show_asset_command(token);
         }
         else if (token != NULL && (strcmp(token, "bid") == 0 || strcmp(token, "b") == 0)) {
             bid_command(token);
