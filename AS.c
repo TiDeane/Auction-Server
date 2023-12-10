@@ -326,9 +326,9 @@ void open_command(char* buffer, int new_fd, int nread) {
     char pathname[38];
     char password[PW_LEN+1];
     char name[MAX_DESC_NAME_LEN+1];
-    char fname[MAX_FILENAME+1];
+    char fname[MAX_FNAME_LEN+1];
     char date_time[DATE_LEN+TIME_LEN+2];
-    char sfilecontents[UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+    char sfilecontents[UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                        MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8];
     char* ptr;
     int svalue, timeactive, n, nleft, nwritten, AID;
@@ -457,11 +457,11 @@ void close_command(char* buffer, int new_fd) {
     char password[PW_LEN+1];
     char dirname[21];
     char pathname[32];
-    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FILENAME+1];
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FNAME_LEN+1];
     char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     long stime_seconds, end_sec_time;
     int AID, n, svalue, timeactive;
-    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     time_t current_time;
 
@@ -550,10 +550,10 @@ void close_command(char* buffer, int new_fd) {
 void show_asset_command(char* buffer, int new_fd) {
     char pathname[46];
     char UID[UID_LEN+1];
-    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FILENAME+1];
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FNAME_LEN+1];
     char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     int AID, n, svalue, timeactive, command_length;
-    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     long stime_seconds, end_sec_time;
     time_t current_time;
@@ -625,11 +625,11 @@ void show_asset_command(char* buffer, int new_fd) {
 void myauctions_command(char* buffer) {
     struct dirent **filelist;
     int AID, svalue, timeactive, n, n_entries, i, len;
-    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     long stime_seconds, end_sec_time;
     char sfilecontents[start_size];
-    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FILENAME+1];
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FNAME_LEN+1];
     char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     char UID[UID_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
@@ -711,11 +711,11 @@ void myauctions_command(char* buffer) {
 void mybids_command(char* buffer) {
     struct dirent **filelist;
     int AID, svalue, timeactive, n, n_entries, i, len;
-    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     long stime_seconds, end_sec_time;
     char sfilecontents[start_size];
-    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FILENAME+1];
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FNAME_LEN+1];
     char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     char UID[UID_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
@@ -797,12 +797,12 @@ void mybids_command(char* buffer) {
 void list_command(char* buffer) {
     struct dirent **filelist;
     int AID, svalue, timeactive, n, n_entries, i, len;
-    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     long stime_seconds, end_sec_time;
     char sfilecontents[start_size];
     char UID[UID_LEN+1];
-    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FILENAME+1];
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FNAME_LEN+1];
     char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     char dirname[10];
     char pathname[32];
@@ -878,12 +878,12 @@ void show_record_command(char* buffer) {
     char dirname[13];
     char pathname[32];
     char auction_name[MAX_DESC_NAME_LEN+1];
-    char auction_fname[MAX_FILENAME+1];
+    char auction_fname[MAX_FNAME_LEN+1];
     char value[MAX_VALUE_LEN+1]; // Used for the auction's start value and the bids' value
     char sdate[DATE_LEN+1]; // Used for the auction's start date and the bids' date
     char stime[TIME_LEN+1]; // Used for the auction's start time and the bids' time
     char duration_sec[MAX_DURATION_LEN+1]; // Used for the auction's time active and the bids' time
-    int info_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+    int info_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                     MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     char info[info_size+1];
     long end_sec_time, stime_seconds, timeactive;
