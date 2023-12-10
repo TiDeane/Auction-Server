@@ -10,3 +10,6 @@ AS: AS.c utils.o
 
 clean:
 	rm -f user AS *.o
+
+reset:
+	rm -rf USERS/* AUCTIONS/*

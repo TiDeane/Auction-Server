@@ -118,7 +118,7 @@ void end_auction(int AID, long duration_sec, time_t current_time) {
     else
         return;
     
-    sprintf(end_info,"%s %ld",end_datetime,duration_sec);
+    sprintf(end_info,"%s %ld",end_datetime,timeactive);
     fwrite(end_info,1,strlen(end_info),end_file);
     fclose(end_file);
 }
@@ -329,7 +329,7 @@ void open_command(char* buffer, int new_fd, int nread) {
     char fname[MAX_FILENAME+1];
     char date_time[DATE_LEN+TIME_LEN+2];
     char sfilecontents[UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
-                       MAX_DURATION_LEN+DATE_LEN+TIME_LEN+1];
+                       MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8];
     char* ptr;
     int svalue, timeactive, n, nleft, nwritten, AID;
     long fsize;
@@ -440,6 +440,9 @@ void open_command(char* buffer, int new_fd, int nread) {
         nleft -= nread;
     }
 
+    if (timeactive == 0)
+        end_auction(AID, timeactive, fulltime);
+
     char response[12];
     sprintf(response, "ROA OK %03d\n", AID);
     n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
@@ -452,10 +455,9 @@ void close_command(char* buffer, int new_fd) {
     char UID_given[UID_LEN+1];
     char UID_start[UID_LEN+1];
     char password[PW_LEN+1];
-    char name[MAX_DESC_NAME_LEN+1];
-    char fname[MAX_FILENAME+1];
     char dirname[21];
     char pathname[32];
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FILENAME+1];
     char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     long stime_seconds, end_sec_time;
     int AID, n, svalue, timeactive;
@@ -548,11 +550,13 @@ void close_command(char* buffer, int new_fd) {
 void show_asset_command(char* buffer, int new_fd) {
     char pathname[46];
     char UID[UID_LEN+1];
-    char name[MAX_DESC_NAME_LEN+1];
-    char fname[MAX_FILENAME+1];
-    int AID, n, command_length;
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FILENAME+1];
+    char sdate[DATE_LEN+1], stime[TIME_LEN+1];
+    int AID, n, svalue, timeactive, command_length;
     int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
+    long stime_seconds, end_sec_time;
+    time_t current_time;
 
     sscanf(buffer, "SAS %d\n", &AID);
 
@@ -563,8 +567,16 @@ void show_asset_command(char* buffer, int new_fd) {
         return;
     }
     fgets(buffer,start_size,start_file);
-    sscanf(buffer,"%s %s %s ",UID,name,fname);
+    sscanf(buffer,"%s %s %s %d %d %s %s %ld",UID,name,fname,&svalue,&timeactive,sdate,stime,&stime_seconds);
     fclose(start_file);
+
+    current_time = time(NULL);
+    end_sec_time = difftime(current_time,(time_t)stime_seconds);
+    if (end_sec_time >= timeactive) { // Ends auction if it's duration has been exceeded
+        end_sec_time = timeactive;
+        current_time = stime_seconds + timeactive;
+        end_auction(AID,end_sec_time,current_time);
+    }
 
     sprintf(pathname,"AUCTIONS/%03d/%s",AID,fname);
     if (!file_exists(pathname)) {
@@ -612,13 +624,19 @@ void show_asset_command(char* buffer, int new_fd) {
 
 void myauctions_command(char* buffer) {
     struct dirent **filelist;
-    int n, n_entries, i, len;
-    char AID[AID_LEN+1];
+    int AID, svalue, timeactive, n, n_entries, i, len;
+    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+                     MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
+    long stime_seconds, end_sec_time;
+    char sfilecontents[start_size];
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FILENAME+1];
+    char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     char UID[UID_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
     char dirname[21];
     char pathname[32];
     char AID_state[AID_LEN+3];
+    time_t current_time;
 
     sscanf(buffer, "LMA %s\n", UID);
     sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
@@ -648,13 +666,34 @@ void myauctions_command(char* buffer) {
         len = strlen(filelist[i]->d_name);
         if (len == 7) {
             strcat(buffer," ");
-            //TODO: check timeactive and see if END needs to be created
-            sscanf(filelist[i]->d_name,"%3s.txt",AID);
-            sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
+
+            sscanf(filelist[i]->d_name,"%03d.txt",&AID);
+
+            // Opens START file to see if auction has exceeded its duration
+            sprintf(pathname,"AUCTIONS/%03d/START_%03d.txt",AID,AID);
+            FILE *start_file = fopen(pathname, "r");
+            if (start_file == NULL) {
+                perror("Error opening the START file");
+                return;
+            }
+            fgets(sfilecontents,start_size,start_file);
+            sscanf(sfilecontents,"%s %s %s %d %d %s %s %ld",UID,name,fname,
+                                &svalue,&timeactive,sdate,stime,&stime_seconds);
+            fclose(start_file);
+
+            current_time = time(NULL);
+            end_sec_time = difftime(current_time,(time_t)stime_seconds);
+            if (end_sec_time >= timeactive) { // Ends auction if it's duration has been exceeded
+                end_sec_time = timeactive;
+                current_time = stime_seconds + timeactive;
+                end_auction(AID,end_sec_time,current_time);
+            }
+
+            sprintf(pathname,"AUCTIONS/%03d/END_%03d.txt",AID,AID);
             if (file_exists(pathname))
-                sprintf(AID_state,"%s 0", AID);
+                sprintf(AID_state,"%03d 0", AID);
             else
-                sprintf(AID_state,"%s 1", AID);
+                sprintf(AID_state,"%03d 1", AID);
             
             strcat(buffer, AID_state);
         }
@@ -671,13 +710,19 @@ void myauctions_command(char* buffer) {
 
 void mybids_command(char* buffer) {
     struct dirent **filelist;
-    int n, n_entries, i, len;
-    char AID[AID_LEN+1];
+    int AID, svalue, timeactive, n, n_entries, i, len;
+    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+                     MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
+    long stime_seconds, end_sec_time;
+    char sfilecontents[start_size];
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FILENAME+1];
+    char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     char UID[UID_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
     char dirname[21];
     char pathname[32];
     char AID_state[AID_LEN+3];
+    time_t current_time;
 
     sscanf(buffer, "LMB %s\n", UID);
     sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
@@ -707,13 +752,34 @@ void mybids_command(char* buffer) {
         len = strlen(filelist[i]->d_name);
         if (len == 7) {
             strcat(buffer," ");
-            //TODO: check timeactive and see if END needs to be created
-            sscanf(filelist[i]->d_name,"%3s.txt",AID);
-            sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
+
+            sscanf(filelist[i]->d_name,"%03d.txt",&AID);
+
+            // Opens START file to see if auction has exceeded its duration
+            sprintf(pathname,"AUCTIONS/%03d/START_%03d.txt",AID,AID);
+            FILE *start_file = fopen(pathname, "r");
+            if (start_file == NULL) {
+                perror("Error opening the START file");
+                return;
+            }
+            fgets(sfilecontents,start_size,start_file);
+            sscanf(sfilecontents,"%s %s %s %d %d %s %s %ld",UID,name,fname,
+                                &svalue,&timeactive,sdate,stime,&stime_seconds);
+            fclose(start_file);
+
+            current_time = time(NULL);
+            end_sec_time = difftime(current_time,(time_t)stime_seconds);
+            if (end_sec_time >= timeactive) { // Ends auction if it's duration has been exceeded
+                end_sec_time = timeactive;
+                current_time = stime_seconds + timeactive;
+                end_auction(AID,end_sec_time,current_time);
+            }
+
+            sprintf(pathname,"AUCTIONS/%03d/END_%03d.txt",AID,AID);
             if (file_exists(pathname))
-                sprintf(AID_state,"%s 0", AID);
+                sprintf(AID_state,"%03d 0", AID);
             else
-                sprintf(AID_state,"%s 1", AID);
+                sprintf(AID_state,"%03d 1", AID);
             
             strcat(buffer, AID_state);
         }
@@ -730,11 +796,18 @@ void mybids_command(char* buffer) {
 
 void list_command(char* buffer) {
     struct dirent **filelist;
-    int n, n_entries, i, len;
-    char AID[AID_LEN+1];
+    int AID, svalue, timeactive, n, n_entries, i, len;
+    int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
+                     MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
+    long stime_seconds, end_sec_time;
+    char sfilecontents[start_size];
+    char UID[UID_LEN+1];
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FILENAME+1];
+    char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     char dirname[10];
     char pathname[32];
     char AID_state[AID_LEN+3];
+    time_t current_time;
 
     sprintf(dirname,"AUCTIONS/");
     n_entries = scandir(dirname, &filelist, NULL, alphasort);
@@ -756,13 +829,34 @@ void list_command(char* buffer) {
         len = strlen(filelist[i]->d_name);
         if (len == 3) {
             strcat(buffer," ");
-            //TODO: check timeactive and see if END needs to be created
-            sscanf(filelist[i]->d_name,"%3s",AID);
-            sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
+            
+            sscanf(filelist[i]->d_name,"%03d",&AID);
+
+            // Opens START file to see if auction has exceeded its duration
+            sprintf(pathname,"AUCTIONS/%03d/START_%03d.txt",AID,AID);
+            FILE *start_file = fopen(pathname, "r");
+            if (start_file == NULL) {
+                perror("Error opening the START file");
+                return;
+            }
+            fgets(sfilecontents,start_size,start_file);
+            sscanf(sfilecontents,"%s %s %s %d %d %s %s %ld",UID,name,fname,
+                                &svalue,&timeactive,sdate,stime,&stime_seconds);
+            fclose(start_file);
+
+            current_time = time(NULL);
+            end_sec_time = difftime(current_time,(time_t)stime_seconds);
+            if (end_sec_time >= timeactive) { // Ends auction if it's duration has been exceeded
+                end_sec_time = timeactive;
+                current_time = stime_seconds + timeactive;
+                end_auction(AID,end_sec_time,current_time);
+            }
+
+            sprintf(pathname,"AUCTIONS/%03d/END_%03d.txt",AID,AID);
             if (file_exists(pathname))
-                sprintf(AID_state,"%s 0", AID);
+                sprintf(AID_state,"%03d 0", AID);
             else
-                sprintf(AID_state,"%s 1", AID);
+                sprintf(AID_state,"%03d 1", AID);
             
             strcat(buffer, AID_state);
         }
