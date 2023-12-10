@@ -118,7 +118,7 @@ void end_auction(int AID, long duration_sec, time_t current_time) {
     else
         return;
     
-    sprintf(end_info,"%s %ld",end_datetime,timeactive);
+    sprintf(end_info,"%s %ld",end_datetime,duration_sec);
     fwrite(end_info,1,strlen(end_info),end_file);
     fclose(end_file);
 }
