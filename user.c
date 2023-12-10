@@ -73,6 +73,10 @@ void login_command(char* buffer) {
         printf("incorrect login attempt\n");
         return;
     }
+    else if (strncmp(buffer,"RLI ERR\n", 8) == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
+        return;
+    }
 }
 
 /* Logs out of the Auction Server. Command format is "logout" */ 
@@ -106,6 +110,10 @@ void logout_command() {
         printf("unknown user\n");
         return;
     }
+    else if (strncmp(buffer,"RLO ERR\n", 8) == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
+        return;
+    }
 }
 
 /* Unregisters user from the Auction Server. Command format is "unregister" */ 
@@ -137,6 +145,10 @@ void unregister_command(){
     }
     else if(strncmp(buffer,"RUR NOK\n", 8) == 0){
         printf("incorrect unregister attempt\n");
+        return;
+    }
+    else if (strncmp(buffer,"RUR ERR\n", 8) == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
 }
@@ -235,7 +247,8 @@ void open_command(char* buffer) {
         printf("ERR: Invalid response from server\n");
         return;
     }
-    else if (strcmp(status, "OK") == 0) {
+
+    if (strcmp(status, "OK") == 0) {
         printf("Auction [%03d] successfully created\n", AID);
         return;
     }
@@ -245,6 +258,10 @@ void open_command(char* buffer) {
     }
     else if (strcmp(status, "NLG") == 0) {
         printf("User was not logged into the server\n");
+        return;
+    }
+    else if (strcmp(status,"ERR\n") == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
 }
@@ -311,6 +328,10 @@ void close_command(char* buffer) {
         printf("User was not logged into the Auction Server\n");
         return;
     }
+    else if (strncmp(buffer,"RCL ERR\n", 8) == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
+        return;
+    }
 }
 
 /* Lists the current user's auctions. Format is "myauctions" or "ma" */ 
@@ -349,6 +370,10 @@ void myauctions_command(){
         printf("user has no ongoing auctions\n");
         return;
     }
+    else if (strncmp(buffer,"RMA ERR\n", 8) == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
+        return;
+    }
 }
 
 /* Lists the current user's bids. Command format is "mybids" or "mb" */
@@ -375,16 +400,20 @@ void mybids_command(){
     else
         return; // error
 
-    if(strncmp(buffer,"RMB OK",6)==0){
+    if(strncmp(buffer,"RMB OK\n",7)==0){
         printf("My bids:\n%s", buffer + 7);
         return;
     }
-    else if(strncmp(buffer,"RMB NLG",7)==0){
+    else if(strncmp(buffer,"RMB NLG\n",8)==0){
         printf("user not logged in!\n");
         return;
     }
-    else if(strncmp(buffer,"RMB NOK",7)==0){
+    else if(strncmp(buffer,"RMB NOK\n",8)==0){
         printf("user has no ongoing bids\n");
+        return;
+    }
+    else if (strncmp(buffer,"RMB ERR\n", 8) == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
 }
@@ -412,6 +441,10 @@ void list_command() {
     }
     else if(strncmp(buffer,"RLS NOK", 7) == 0){
         printf("No auctions have been started\n");
+        return;
+    }
+    else if (strncmp(buffer,"RLS ERR\n", 8) == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
 }
@@ -458,9 +491,14 @@ void show_asset_command(char* buffer) {
 
     sscanf_ret = sscanf(buffer, "RSA %s %s %ld", status, fname, &fsize);
 
+
     if (sscanf_ret == 0 || strcmp(status, "NOK") == 0) {
         printf("There is no file to be sent, or a problem ocurred\n");
         close(TCP_fd);
+        return;
+    }
+    else if (strcmp(status,"ERR\n") == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
     else if (strcmp(status, "OK") == 0) {
@@ -468,11 +506,7 @@ void show_asset_command(char* buffer) {
         if (sscanf_ret == 1) { // Only status was read
             nread = read(TCP_fd, buffer, BUFSIZE);
             sscanf_ret = sscanf(buffer, "%s %ld", fname, &fsize);
-            if (!check_fname_format(fname) || !valid_filesize(fsize)) {
-                printf("There is no file to be sent, or a problem ocurred\n");
-                close(TCP_fd);
-                return;
-            }
+
             fsize_len = snprintf(NULL, 0, "%ld", fsize);
             fname_len = strlen(fname);
             data_start = fname_len + fsize_len + 2;
@@ -484,6 +518,12 @@ void show_asset_command(char* buffer) {
         }
         ptr = buffer;
         ptr += data_start; // Points to start of data
+
+        if (!check_fname_format(fname) || !valid_filesize(fsize)) {
+            printf("There is no file to be sent, or a problem ocurred\n");
+            close(TCP_fd);
+            return;
+        }
 
         FILE *file = fopen(fname, "wb");
         if (file == NULL) {
@@ -609,6 +649,10 @@ void bid_command(char* buffer) {
         close(TCP_fd);
         return;
     }
+    else if (strncmp(buffer,"RBD ERR\n", 8) == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
+        return;
+    }
 }
 
 /* Shows the record of the given auction. Format is "show_asset AID" or "sa AID" */
@@ -644,13 +688,17 @@ void show_record_command(char *buffer){
         printf("Auction %03d does not exist\n", AID);
         return;
     }
-    else if(strncmp(buffer,"RRC OK",6) == 0){
+    else if(strncmp(buffer,"RRC OK\n",7) == 0){
         for (i = 1; i < n; i++) {
             if (buffer[i-1] == ' ' && (buffer[i] == 'B'|| buffer[i] == 'E'))
                 buffer[i-1] = '\n';
         }
 
         printf("%s",buffer + 7);
+        return;
+    }
+    else if (strncmp(buffer,"RCL ERR\n", 8) == 0){
+        printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
 }

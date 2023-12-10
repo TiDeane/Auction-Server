@@ -130,11 +130,11 @@ void login_command(char *buffer) {
     char UID_BID_directory[UID_BID_DIR_PATH_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
     char UID_pass_file_path[UID_PASS_FILE_LEN+1];
-    int n;
+    int n, sscanf_ret;
 
-    sscanf(buffer, "LIN %s %s\n", UID, password);
+    sscanf_ret = sscanf(buffer, "LIN %s %s\n", UID, password);
 
-    if (!check_UID_format(UID) || !check_password_format(password)) {
+    if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLI ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
@@ -232,11 +232,11 @@ void logout_command(char* buffer) {
     char UID[UID_LEN+1], password[PW_LEN+1];
     char UID_directory[UID_DIR_PATH_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
-    int n;
+    int n, sscanf_ret;
 
-    sscanf(buffer, "LOU %s %s\n", UID, password);
+    sscanf_ret = sscanf(buffer, "LOU %s %s\n", UID, password);
 
-    if (!check_UID_format(UID) || !check_password_format(password)) {
+    if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLO ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
@@ -274,11 +274,11 @@ void unregister_command(char* buffer) {
     char UID_directory[UID_DIR_PATH_LEN+1];
     char UID_login_file_path[UID_LOGIN_FILE_LEN+1];
     char UID_pass_file_path[UID_PASS_FILE_LEN+1];
-    int n;
+    int n, sscanf_ret;
 
-    sscanf(buffer, "UNR %s %s\n", UID, password);
+    sscanf_ret = sscanf(buffer, "UNR %s %s\n", UID, password);
 
-    if (!check_UID_format(UID) || !check_password_format(password)) {
+    if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RUR ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
@@ -324,16 +324,17 @@ void open_command(char* buffer, int new_fd, int nread) {
     char sfilecontents[UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                        MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8];
     char* ptr;
-    int svalue, timeactive, n, nleft, nwritten, AID;
+    int svalue, timeactive, n, nleft, nwritten, AID, sscanf_ret;
     long fsize;
+    ssize_t data_received;
 
-    sscanf(buffer, "OPA %s %s %s %d %d %s %ld ", UID, password, name, &svalue, &timeactive, fname, &fsize);
+    sscanf_ret = sscanf(buffer, "OPA %s %s %s %d %d %s %ld ", UID, password, name, &svalue, &timeactive, fname, &fsize);
 
-    if (!check_UID_format(UID)||!check_password_format(password)||!check_desc_name_format(name)||
+    if (sscanf_ret != 7||!check_UID_format(UID)||!check_password_format(password)||!check_desc_name_format(name)||
         !valid_value(svalue)||!valid_timeactive(timeactive)||!valid_filesize(fsize)) {
-        char response[] = "RUR ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        char response[] = "ROA ERR\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
         return;
     }
     
@@ -346,7 +347,7 @@ void open_command(char* buffer, int new_fd, int nread) {
     }
 
     AID = get_new_AID(); 
-    if (AID > MAX_AUCTIONS) { 
+    if (!valid_AID(AID)) { 
         char response[] = "ROA NOK\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
@@ -394,7 +395,6 @@ void open_command(char* buffer, int new_fd, int nread) {
         return;
     }
 
-    // Moves ptr to the start of the data
     ptr = buffer;
     int name_len = strlen(name);
     int fname_len = strlen(fname);
@@ -411,8 +411,6 @@ void open_command(char* buffer, int new_fd, int nread) {
         remove(dirname);
         return;
     }
-
-    ssize_t data_received;
 
     if (fsize > (nread - data_start))
         data_received = nread - data_start;
@@ -461,12 +459,20 @@ void close_command(char* buffer, int new_fd) {
     char name[MAX_DESC_NAME_LEN+1], fname[MAX_FNAME_LEN+1];
     char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     long stime_seconds, end_sec_time;
-    int AID, n, svalue, timeactive;
+    int AID, n, svalue, timeactive, sscanf_ret;
     int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     time_t current_time;
 
-    sscanf(buffer,"CLS %s %s %d\n", UID_given, password, &AID);
+    sscanf_ret = sscanf(buffer,"CLS %s %s %d\n", UID_given, password, &AID);
+
+    if (sscanf_ret != 3 || !check_UID_format(UID_given) ||
+        !check_password_format(password) || !valid_AID(AID)) {
+        char response[] = "RCL ERR\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
 
     sprintf(dirname, "USERS/%s/", UID_given);
     if (!dir_exists(dirname)) {
@@ -553,13 +559,20 @@ void show_asset_command(char* buffer, int new_fd) {
     char UID[UID_LEN+1];
     char name[MAX_DESC_NAME_LEN+1], fname[MAX_FNAME_LEN+1];
     char sdate[DATE_LEN+1], stime[TIME_LEN+1];
-    int AID, n, svalue, timeactive, command_length;
+    int AID, n, svalue, timeactive, command_length, sscanf_ret;
     int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     long stime_seconds, end_sec_time;
     time_t current_time;
 
-    sscanf(buffer, "SAS %d\n", &AID);
+    sscanf_ret = sscanf(buffer, "SAS %d\n", &AID);
+
+    if (sscanf_ret != 1 || !valid_AID(AID)) {
+        char response[] = "RSA ERR\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
 
     sprintf(pathname,"AUCTIONS/%03d/START_%03d.txt",AID,AID);
     FILE *start_file = fopen(pathname, "r");
@@ -625,7 +638,7 @@ void show_asset_command(char* buffer, int new_fd) {
 
 void myauctions_command(char* buffer) {
     struct dirent **filelist;
-    int AID, svalue, timeactive, n, n_entries, i, len;
+    int sscanf_ret, AID, svalue, timeactive, n, n_entries, i, len;
     int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     long stime_seconds, end_sec_time;
@@ -639,7 +652,14 @@ void myauctions_command(char* buffer) {
     char AID_state[AID_LEN+3];
     time_t current_time;
 
-    sscanf(buffer, "LMA %s\n", UID);
+    sscanf_ret = sscanf(buffer, "LMA %s\n", UID);
+    if (sscanf_ret != 1 || !check_UID_format(UID)) {
+        char response[] = "RMA ERR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
     sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) {
         char response[] = "RMA NLG\n";
@@ -711,7 +731,7 @@ void myauctions_command(char* buffer) {
 
 void mybids_command(char* buffer) {
     struct dirent **filelist;
-    int AID, svalue, timeactive, n, n_entries, i, len;
+    int sscanf_ret, AID, svalue, timeactive, n, n_entries, i, len;
     int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     long stime_seconds, end_sec_time;
@@ -725,7 +745,14 @@ void mybids_command(char* buffer) {
     char AID_state[AID_LEN+3];
     time_t current_time;
 
-    sscanf(buffer, "LMB %s\n", UID);
+    sscanf_ret = sscanf(buffer, "LMB %s\n", UID);
+    if (sscanf_ret != 1 || !check_UID_format(UID)) {
+        char response[] = "RMB ERR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
     sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) {
         char response[] = "RMB NLG\n";
@@ -874,7 +901,7 @@ void list_command(char* buffer) {
 
 void show_record_command(char* buffer) {
     struct dirent **bidlist;
-    int n, n_bids, len, AID, timeactive, bids_read = 0;
+    int sscanf_ret, n, n_bids, len, AID, timeactive, bids_read = 0;
     char UID[UID_LEN+1];
     char dirname[13];
     char pathname[32];
@@ -890,7 +917,14 @@ void show_record_command(char* buffer) {
     long end_sec_time, stime_seconds;
     time_t current_time;
 
-    sscanf(buffer, "SRC %03d", &AID);
+    sscanf_ret = sscanf(buffer, "SRC %03d", &AID);
+    if (sscanf_ret != 1 || !valid_AID(AID)) {
+        char response[] = "RRC ERR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
     sprintf(dirname,"AUCTIONS/%03d",AID);
     if (!dir_exists(dirname)) { // Auction doesn't exists
         char response[] = "RRC NOK\n";
