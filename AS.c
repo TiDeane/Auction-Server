@@ -97,6 +97,32 @@ int create_login_files(char *UID, char *password) {
     return 0;
 }
 
+/* Ends auction AID, that lasted duration_sec, at current_time */
+void end_auction(int AID, long duration_sec, time_t current_time) {
+    char end_info[DATE_LEN+TIME_LEN+MAX_FULLTIME+3];
+    char pathname[32];
+    char end_datetime[DATE_LEN+TIME_LEN+2];
+    
+    sprintf(pathname,"AUCTIONS/%03d/END_%03d.txt",AID,AID);
+    if (file_exists(pathname))
+        return;
+    FILE *end_file = fopen(pathname, "w");
+    if (end_file == NULL ) {
+        perror("Error creating the end file");
+        return;
+    }
+    
+    struct tm *timeinfo = gmtime(&current_time);
+    if (timeinfo != NULL)
+        strftime(end_datetime, sizeof(end_datetime), "%Y-%m-%d %H:%M:%S", timeinfo);
+    else
+        return;
+    
+    sprintf(end_info,"%s %ld",end_datetime,duration_sec);
+    fwrite(end_info,1,strlen(end_info),end_file);
+    fclose(end_file);
+}
+
 void login_command(char *buffer) {
     char UID[UID_LEN+1], password[PW_LEN+1];
     char UID_directory[UID_DIR_PATH_LEN+1];
@@ -423,21 +449,23 @@ void open_command(char* buffer, int new_fd, int nread) {
 }
 
 void close_command(char* buffer, int new_fd) {
-    char UID[UID_LEN+1];
+    char UID_given[UID_LEN+1];
+    char UID_start[UID_LEN+1];
     char password[PW_LEN+1];
     char name[MAX_DESC_NAME_LEN+1];
     char fname[MAX_FILENAME+1];
     char dirname[21];
     char pathname[32];
-    char sdate[DATE_LEN+1], stime[TIME_LEN+1], end_datetime[DATE_LEN+TIME_LEN+2];
+    char sdate[DATE_LEN+1], stime[TIME_LEN+1];
     long stime_seconds, end_sec_time;
     int AID, n, svalue, timeactive;
     int start_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
                      MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
+    time_t current_time;
 
-    sscanf(buffer,"CLS %s %s %d\n", UID, password, &AID);
+    sscanf(buffer,"CLS %s %s %d\n", UID_given, password, &AID);
 
-    sprintf(dirname, "USERS/%s/", UID);
+    sprintf(dirname, "USERS/%s/", UID_given);
     if (!dir_exists(dirname)) {
         char response[] = "RCL NOK\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
@@ -445,7 +473,7 @@ void close_command(char* buffer, int new_fd) {
         return;
     }
 
-    sprintf(pathname,"USERS/%s/%s_pass.txt",UID,UID);
+    sprintf(pathname,"USERS/%s/%s_pass.txt",UID_given,UID_given);
     FILE *pass_file = fopen(pathname, "r");
     if (pass_file == NULL) {
         perror("Error creating the password file");
@@ -461,15 +489,15 @@ void close_command(char* buffer, int new_fd) {
     }
     fclose(pass_file);
 
-    sprintf(pathname,"USERS/%s/%s_login.txt",UID,UID);
-    if (!file_exists(pathname)) {
+    sprintf(pathname,"USERS/%s/%s_login.txt",UID_given,UID_given);
+    if (!file_exists(pathname)) { // User is not logged in
         char response[] = "RCL NLG\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
         return;
     }
     sprintf(dirname, "AUCTIONS/%03d/", AID);
-    if (!dir_exists(dirname)) {
+    if (!dir_exists(dirname)) { // Auction doesn't exist
         char response[] = "RCL EAU\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
@@ -483,15 +511,23 @@ void close_command(char* buffer, int new_fd) {
         return;
     }
     fgets(buffer, start_size, start_file);
-    //TODO: check timeactive and see if END needs to be created
-    if (strncmp(buffer,UID,UID_LEN) != 0) { // Auction is not owned by given UID
-        fclose(start_file);
+    sscanf(buffer,"%s %s %s %d %d %s %s %ld",UID_start,name,fname,&svalue,&timeactive,sdate,stime,&stime_seconds);
+    fclose(start_file);
+    
+    current_time = time(NULL);
+    end_sec_time = difftime(current_time,(time_t)stime_seconds);
+    if (end_sec_time >= timeactive) { // Ends auction preemptively if it's duration has been exceeded
+        end_sec_time = timeactive;
+        current_time = stime_seconds + timeactive;
+        end_auction(AID,end_sec_time,current_time);
+    }
+
+    if (strcmp(UID_start,UID_given) != 0) { // Auction is not owned by given UID
         char response[] = "RCL EOW\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
         return;
     }
-    fclose(start_file);
 
     sprintf(pathname, "AUCTIONS/%03d/END_%03d.txt",AID,AID);
     if (file_exists(pathname)) { // Auction has already ended
@@ -499,26 +535,9 @@ void close_command(char* buffer, int new_fd) {
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
         return;
-    } else {
-        FILE *end_file = fopen(pathname, "w");
-        if (end_file == NULL) {
-            perror("Error creating the password file");
-            return;
-        }
+    } else {   
+        end_auction(AID,end_sec_time,current_time);
 
-        time_t current_time = time(NULL);
-        struct tm *timeinfo = gmtime(&current_time);
-        if (timeinfo != NULL)
-            strftime(end_datetime, sizeof(end_datetime), "%Y-%m-%d %H:%M:%S", timeinfo);
-        else
-            return;
-        
-        sscanf(buffer,"%s %s %s %d %d %s %s %ld",UID,name,fname,&svalue,&timeactive,sdate,stime,&stime_seconds);
-        end_sec_time = difftime(current_time,(time_t)stime_seconds);
-        sprintf(buffer,"%s %ld",end_datetime,end_sec_time);
-        fwrite(buffer,1,strlen(buffer),end_file);
-
-        fclose(end_file);
         char response[] = "RCL OK\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
@@ -760,72 +779,81 @@ void list_command(char* buffer) {
 
 void show_record_command(char* buffer) {
     struct dirent **bidlist;
-    int n, n_bids, len, bids_read = 0;
+    int n, n_bids, len, AID, bids_read = 0;
     char UID[UID_LEN+1];
-    char AID[AID_LEN+1];
     char dirname[13];
     char pathname[32];
     char auction_name[MAX_DESC_NAME_LEN+1];
     char auction_fname[MAX_FILENAME+1];
     char value[MAX_VALUE_LEN+1]; // Used for the auction's start value and the bids' value
-    char date[DATE_LEN+1]; // Used for the auction's start date and the bids' date
-    char time[TIME_LEN+1]; // Used for the auction's start time and the bids' time
+    char sdate[DATE_LEN+1]; // Used for the auction's start date and the bids' date
+    char stime[TIME_LEN+1]; // Used for the auction's start time and the bids' time
     char duration_sec[MAX_DURATION_LEN+1]; // Used for the auction's time active and the bids' time
     int info_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FILENAME+MAX_VALUE_LEN+
                     MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     char info[info_size+1];
+    long end_sec_time, stime_seconds, timeactive;
+    time_t current_time;
 
-    sscanf(buffer, "SRC %03s", AID); //TODO: check if it's read with all 3 digits
-    sprintf(dirname,"AUCTIONS/%s",AID);
-    if (dir_exists(dirname)) { // Auction exists
-        sprintf(pathname,"AUCTIONS/%s/START_%s.txt",AID,AID);
-        FILE *start_file = fopen(pathname, "r");
-        if (start_file == NULL) {
-            perror("Error opening the START file");
-            return;
-        }
-        fread(info,1,info_size,start_file);
-        fclose(start_file);
-
-        strcpy(buffer,"RRC OK ");
-        sscanf(info,"%s %s %s %s %s %s %s",UID,auction_name,auction_fname,
-                value,duration_sec,date,time);
-        sprintf(info,"%s %s %s %s %s %s %s",UID,auction_name,auction_fname,
-                value,date,time,duration_sec);
-        strcat(buffer,info);
-
-        sprintf(pathname,"AUCTIONS/%s/BIDS/",AID);
-        n_bids = scandir(pathname, &bidlist, NULL, alphasort); // Test versionsort if this doesn't work
-        if (n_bids<=0)
-            return;
-        while (n_bids--) {
-            len = strlen(bidlist[n_bids]->d_name);
-            if (len == 10 && bids_read < 50) {
-                sprintf(pathname,"AUCTIONS/%s/BIDS/%s",AID,bidlist[n_bids]->d_name);
-                FILE *bid_file = fopen(pathname, "r");
-                if (bid_file == NULL) {
-                    perror("Error opening a bid's file");
-                    return;
-                }
-                n = fread(info,1,info_size,bid_file);
-                info[n] = '\0';
-                strcat(buffer," B ");
-                strcat(buffer,info);
-
-                fclose(bid_file);
-                bids_read++;
-            }
-            free(bidlist[n_bids]);
-        }
-        free(bidlist);
-    } else { // Auction directory doesn't exist
+    sscanf(buffer, "SRC %03d", &AID);
+    sprintf(dirname,"AUCTIONS/%03d",AID);
+    if (!dir_exists(dirname)) { // Auction doesn't exists
         char response[] = "RRC NOK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
         return;
     }
+    sprintf(pathname,"AUCTIONS/%03d/START_%03d.txt",AID,AID);
+    FILE *start_file = fopen(pathname, "r");
+    if (start_file == NULL) {
+        perror("Error opening the START file");
+        return;
+    }
+    fread(info,1,info_size,start_file);
+    fclose(start_file);
 
-    sprintf(pathname,"AUCTIONS/%s/END_%s.txt",AID,AID);
+    strcpy(buffer,"RRC OK ");
+    sscanf(info,"%s %s %s %s %s %s %s %ld",UID,auction_name,auction_fname,
+            value,duration_sec,sdate,stime,&stime_seconds);
+    sprintf(info,"%s %s %s %s %s %s %s",UID,auction_name,auction_fname,
+            value,sdate,stime,duration_sec);
+    strcat(buffer,info);
+
+    current_time = time(NULL);
+    end_sec_time = difftime(current_time,(time_t)stime_seconds);
+    timeactive = strtol(duration_sec,NULL,10);
+    if (end_sec_time >= timeactive) { // Ends auction if it's duration has been exceeded
+        end_sec_time = timeactive;
+        current_time = stime_seconds + timeactive;
+        end_auction(AID,end_sec_time,current_time);
+    }
+
+    sprintf(pathname,"AUCTIONS/%03d/BIDS/",AID);
+    n_bids = scandir(pathname, &bidlist, NULL, alphasort);
+    if (n_bids<=0)
+        return;
+    while (n_bids--) {
+        len = strlen(bidlist[n_bids]->d_name);
+        if (len == 10 && bids_read < 50) {
+            sprintf(pathname,"AUCTIONS/%03d/BIDS/%s",AID,bidlist[n_bids]->d_name);
+            FILE *bid_file = fopen(pathname, "r");
+            if (bid_file == NULL) {
+                perror("Error opening a bid's file");
+                return;
+            }
+            n = fread(info,1,info_size,bid_file);
+            info[n] = '\0';
+            strcat(buffer," B ");
+            strcat(buffer,info);
+
+            fclose(bid_file);
+            bids_read++;
+        }
+        free(bidlist[n_bids]);
+    }
+    free(bidlist);
+
+    sprintf(pathname,"AUCTIONS/%03d/END_%03d.txt",AID,AID);
     if (file_exists(pathname)) {
         FILE *end_file = fopen(pathname, "r");
         if (end_file == NULL) {
