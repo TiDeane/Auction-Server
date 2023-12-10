@@ -33,6 +33,8 @@
 #define BID_LEN 6
 #define MAX_AUCTIONS 999
 #define MAX_FILESIZE 99999999
+#define MAX_VALUE 999999
+#define MAX_DURATION 99999
 
 #define UID_DIR_PATH_LEN (UID_LEN+6) // USERS/(uid)
 #define UID_HOST_DIR_PATH_LEN (UID_DIR_PATH_LEN+7) // USERS/(uid)/HOSTED
@@ -42,11 +44,11 @@
 
 bool check_UID_format(char* UID);
 bool check_password_format(char* password);
-bool check_AID_format(char* AID);
 bool check_desc_name_format(char* name);
 bool check_fname_format(char* fname);
-bool check_value_format(char* value);
-bool check_timeactive_format(char* timeactive);
+bool valid_AID(int AID);
+bool valid_value(int value);
+bool valid_timeactive(int timeactive);
 bool valid_filesize(long fsize);
 
 bool file_exists (char *filename);

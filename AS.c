@@ -134,20 +134,13 @@ void login_command(char *buffer) {
 
     sscanf(buffer, "LIN %s %s\n", UID, password);
 
-    if (!check_UID_format(UID)) {
-        char response[] = "RLI ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
-        return;
-    }
-    else if (!check_password_format(password)) {
+    if (!check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLI ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
         return;
     }
 
-    // Constructs path to user's directory
     snprintf(UID_directory, sizeof(UID_directory), "USERS/%s", UID);
 
     if (!dir_exists(UID_directory)) { // User directory does not exist, first time registering
@@ -193,7 +186,7 @@ void login_command(char *buffer) {
                 return;
             }
 
-            fgets(buffer, 10, pass_file); // Reads saved password into the buffer
+            fgets(buffer, PW_LEN+1, pass_file); // Reads saved password into the buffer
 
             if (strncmp(buffer,password,PW_LEN) == 0) { // If password matches
                 FILE *login_file = fopen(UID_login_file_path, "w"); // Creates the login file
@@ -243,13 +236,7 @@ void logout_command(char* buffer) {
 
     sscanf(buffer, "LOU %s %s\n", UID, password);
 
-    if (!check_UID_format(UID)) {
-        char response[] = "RLO ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
-        return;
-    }
-    else if (!check_password_format(password)) {
+    if (!check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLO ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
@@ -291,6 +278,13 @@ void unregister_command(char* buffer) {
 
     sscanf(buffer, "UNR %s %s\n", UID, password);
 
+    if (!check_UID_format(UID) || !check_password_format(password)) {
+        char response[] = "RUR ERR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
     snprintf(UID_directory, sizeof(UID_directory), "USERS/%s", UID);
 
     if (!dir_exists(UID_directory)) { // User directory does not exist
@@ -322,11 +316,10 @@ void unregister_command(char* buffer) {
 
 void open_command(char* buffer, int new_fd, int nread) {
     char UID[UID_LEN+1], UID_login_file_path[UID_LOGIN_FILE_LEN+1];
+    char password[PW_LEN+1];
     char dirname[21];
     char pathname[38];
-    char password[PW_LEN+1];
-    char name[MAX_DESC_NAME_LEN+1];
-    char fname[MAX_FNAME_LEN+1];
+    char name[MAX_DESC_NAME_LEN+1], fname[MAX_FNAME_LEN+1];
     char date_time[DATE_LEN+TIME_LEN+2];
     char sfilecontents[UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                        MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8];
@@ -335,6 +328,14 @@ void open_command(char* buffer, int new_fd, int nread) {
     long fsize;
 
     sscanf(buffer, "OPA %s %s %s %d %d %s %ld ", UID, password, name, &svalue, &timeactive, fname, &fsize);
+
+    if (!check_UID_format(UID)||!check_password_format(password)||!check_desc_name_format(name)||
+        !valid_value(svalue)||!valid_timeactive(timeactive)||!valid_filesize(fsize)) {
+        char response[] = "RUR ERR\n";
+        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
     
     snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) { // User is not logged in
@@ -481,7 +482,7 @@ void close_command(char* buffer, int new_fd) {
         perror("Error creating the password file");
         return;
     }
-    fgets(buffer, 10, pass_file); // Reads saved password into the buffer
+    fgets(buffer, PW_LEN+1, pass_file); // Reads saved password into the buffer
     if (strncmp(buffer,password,PW_LEN) != 0) { // If password doesn't match
         fclose(pass_file);
         char response[] = "RCL NOK\n";
@@ -873,7 +874,7 @@ void list_command(char* buffer) {
 
 void show_record_command(char* buffer) {
     struct dirent **bidlist;
-    int n, n_bids, len, AID, bids_read = 0;
+    int n, n_bids, len, AID, timeactive, bids_read = 0;
     char UID[UID_LEN+1];
     char dirname[13];
     char pathname[32];
@@ -886,7 +887,7 @@ void show_record_command(char* buffer) {
     int info_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                     MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
     char info[info_size+1];
-    long end_sec_time, stime_seconds, timeactive;
+    long end_sec_time, stime_seconds;
     time_t current_time;
 
     sscanf(buffer, "SRC %03d", &AID);
@@ -915,7 +916,7 @@ void show_record_command(char* buffer) {
 
     current_time = time(NULL);
     end_sec_time = difftime(current_time,(time_t)stime_seconds);
-    timeactive = strtol(duration_sec,NULL,10);
+    timeactive = atoi(duration_sec);
     if (end_sec_time >= timeactive) { // Ends auction if it's duration has been exceeded
         end_sec_time = timeactive;
         current_time = stime_seconds + timeactive;
