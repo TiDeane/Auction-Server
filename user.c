@@ -400,19 +400,19 @@ void mybids_command(){
     else
         return; // error
 
-    if(strncmp(buffer,"RMB OK\n",7)==0){
+    if(strncmp(buffer,"RMB OK",6)==0){
         printf("My bids:\n%s", buffer + 7);
         return;
     }
-    else if(strncmp(buffer,"RMB NLG\n",8)==0){
+    else if(strncmp(buffer,"RMB NLG",7)==0){
         printf("user not logged in!\n");
         return;
     }
-    else if(strncmp(buffer,"RMB NOK\n",8)==0){
+    else if(strncmp(buffer,"RMB NOK",7)==0){
         printf("user has no ongoing bids\n");
         return;
     }
-    else if (strncmp(buffer,"RMB ERR\n", 8) == 0){
+    else if (strncmp(buffer,"RMB ERR\n",8) == 0){
         printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
@@ -688,7 +688,7 @@ void show_record_command(char *buffer){
         printf("Auction %03d does not exist\n", AID);
         return;
     }
-    else if(strncmp(buffer,"RRC OK\n",7) == 0){
+    else if(strncmp(buffer,"RRC OK",6) == 0){
         for (i = 1; i < n; i++) {
             if (buffer[i-1] == ' ' && (buffer[i] == 'B'|| buffer[i] == 'E'))
                 buffer[i-1] = '\n';
