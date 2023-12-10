@@ -29,22 +29,22 @@ void login_command(char* token) {
         return;
     }
 
-    char UID[7];
+    char UID[UID_LEN+1];
     token = strtok(NULL, " \n");
 
     if (check_UID_format(token))
         strcpy(UID, token);
 
-    char password[9];
+    char password[PW_LEN+1];
     token = strtok(NULL, " \n");
 
     if (check_password_format(token))
         strcpy(password, token);
 
-    char LIN_command[21]; // Use buffer?
+    char LIN_command[STATUS_LEN+UID_LEN+PW_LEN+4];
     snprintf(LIN_command, sizeof(LIN_command), "LIN %s %s\n", UID, password);
 
-    n=sendto(UDP_fd,LIN_command,20,0,res->ai_addr,res->ai_addrlen);
+    n=sendto(UDP_fd,LIN_command,strlen(LIN_command),0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
@@ -81,10 +81,10 @@ void logout_command() {
         return;
     }
 
-    char LOU_command[21]; // Use buffer?
+    char LOU_command[STATUS_LEN+UID_LEN+PW_LEN+4];
     snprintf(LOU_command, sizeof(LOU_command), "LOU %s %s\n", UID_current, password_current);
 
-    n=sendto(UDP_fd,LOU_command,20,0,res->ai_addr,res->ai_addrlen);
+    n=sendto(UDP_fd,LOU_command,strlen(LOU_command),0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
@@ -115,10 +115,10 @@ void unregister_command(){
         return;
     }
 
-    char UNR_Command[21]; // Use buffer?
+    char UNR_Command[STATUS_LEN+UID_LEN+PW_LEN+4];
     snprintf(UNR_Command, sizeof(UNR_Command), "UNR %s %s\n", UID_current, password_current);
 
-    n=sendto(UDP_fd,UNR_Command,20,0,res->ai_addr,res->ai_addrlen);
+    n=sendto(UDP_fd,UNR_Command,strlen(UNR_Command),0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
@@ -143,38 +143,37 @@ void unregister_command(){
 
 /* Opens a new auction. Command format is "open name asset_fname start_value timeactive" */
 void open_command(char* token) {
-
     if (!logged_in) {
         printf("ERR: user must be logged in\n");
         return;
     }
     
-    char name[11]; // 10 alphanumeric characters
-    if ((token = strtok(NULL, " \n")) != NULL)
+    char name[MAX_DESC_NAME_LEN+1];
+    if ((token = strtok(NULL, " \n")) != NULL && check_desc_name_format(token))
         strcpy(name, token);
     else {
         printf("name argument missing\n");
         return;
     }
 
-    char asset_fname[MAX_FILENAME+1]; // Check if it's 24 alphanumerical plus '-', '_' and '.' characters
-    if ((token = strtok(NULL, " \n")) != NULL)
+    char asset_fname[MAX_FNAME_LEN+1];
+    if ((token = strtok(NULL, " \n")) != NULL && check_fname_format(token))
         strcpy(asset_fname, token);
     else {
         printf("asset name argument missing\n");
         return;
     }
 
-    char start_value[7]; // Up to 6 digits
-    if ((token = strtok(NULL, " \n")) != NULL)
+    char start_value[MAX_VALUE_LEN+1];
+    if ((token = strtok(NULL, " \n")) != NULL && check_value_format(token))
         strcpy(start_value, token);
     else {
         printf("start value argument missing\n");
         return;
     }
 
-    char timeactive[6]; // Up to 5 digits
-    if ((token = strtok(NULL, " \n")) != NULL)
+    char timeactive[MAX_DURATION_LEN+1];
+    if ((token = strtok(NULL, " \n")) != NULL && check_timeactive_format(token))
         strcpy(timeactive, token);
     else {
         printf("time active argument missing\n");
@@ -196,8 +195,8 @@ void open_command(char* token) {
     }
     long Fsize = file_info.st_size;
     
-    if (Fsize > 99999999) {
-        printf("File size is too large\n");
+    if (!valid_filesize(Fsize)) {
+        printf("File is too large\n");
         fclose(file);
         return;
     }
@@ -241,7 +240,7 @@ void open_command(char* token) {
     freeaddrinfo(TCP_res);
     close(TCP_fd);
 
-    char status[4];
+    char status[STATUS_LEN+1];
     int AID;
     sscanf(buffer, "ROA %s %d\n", status, &AID);
     
@@ -266,15 +265,15 @@ void close_command(char* token) {
         return;
     }
 
-    char AID[4]; // AID is a 3 digit number
-    if ((token = strtok(NULL, " \n")) != NULL)
+    char AID[AID_LEN+1];
+    if ((token = strtok(NULL, " \n")) != NULL && check_AID_format(token))
         strcpy(AID, token);
     else {
         printf("AID argument missing\n");
         return;
     }
 
-    char CLS_command[25];
+    char CLS_command[STATUS_LEN+UID_LEN+PW_LEN+AID_LEN+5];
     snprintf(CLS_command, sizeof(CLS_command), "CLS %s %s %s\n", UID_current, password_current, AID);
 
     TCP_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
@@ -290,10 +289,10 @@ void close_command(char* token) {
     n=connect(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen);
     if(n==-1)/*error*/exit(1);
 
-    n=write(TCP_fd,CLS_command,24); // TODO: Do multiple writes to guarantee
+    n=write(TCP_fd,CLS_command,strlen(CLS_command)); // TODO: Do multiple writes to guarantee
     if(n==-1)/*error*/exit(1);
 
-    n=read(TCP_fd,buffer,512); // Read multiple times?
+    n=read(TCP_fd,buffer,BUFSIZE); // Read multiple times?
     if(n==-1)/*error*/exit(1);
 
     freeaddrinfo(TCP_res);
@@ -327,7 +326,7 @@ void myauctions_command(){
         printf("ERR: must login first\n");
         return;
     }
-    char LMA_Command[20]="LMA ";
+    char LMA_Command[STATUS_LEN+UID_LEN+3];
     int command_length = snprintf(LMA_Command, sizeof(LMA_Command), "LMA %s\n", UID_current);
     n=sendto(UDP_fd,LMA_Command,command_length,0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ exit(1);
@@ -363,7 +362,7 @@ void mybids_command(){
         return;
     }
 
-    char LMB_Command[12]="LMB ";
+    char LMB_Command[STATUS_LEN+UID_LEN+3]="LMB ";
     int command_length = snprintf(LMB_Command, sizeof(LMB_Command), "LMB %s\n", UID_current);
     n=sendto(UDP_fd,LMB_Command,command_length,0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ exit(1);
@@ -421,19 +420,22 @@ void list_command() {
 
 /* Shows an auction's asset. Command format is "show_asset AID" or "sa AID" */
 void show_asset_command(char* token) {
-    char fname[MAX_FILENAME+1], *ptr;
+    char AID[AID_LEN+1];
+    char status[STATUS_LEN+1];
+    char fname[MAX_FNAME_LEN+1];
+    char *ptr;
     long fsize;
     ssize_t nleft,nwritten,nread;
-
-    char AID[4]; // AID is a 3 digit number
-    if ((token = strtok(NULL, " \n")) != NULL)
+    int sscanf_ret;
+    
+    if ((token = strtok(NULL, " \n")) != NULL && check_AID_format(token))
         strcpy(AID, token);
     else {
         printf("AID argument missing\n");
         return;
     }
 
-    char SAS_command[9];
+    char SAS_command[STATUS_LEN+AID_LEN+3];
     snprintf(SAS_command, sizeof(SAS_command), "SAS %s\n", AID);
     
     TCP_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
@@ -449,7 +451,7 @@ void show_asset_command(char* token) {
     n=connect(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen);
     if(n==-1)/*error*/exit(1);
 
-    n=write(TCP_fd,SAS_command,8); // TODO: Do multiple writes to guarantee
+    n=write(TCP_fd,SAS_command,strlen(SAS_command)); // TODO: Do multiple writes to guarantee
     if(n==-1)/*error*/exit(1);
 
     bzero(buffer,BUFSIZE);
@@ -457,10 +459,10 @@ void show_asset_command(char* token) {
     nread=read(TCP_fd,buffer,BUFSIZE);
     if(n==-1)/*error*/exit(1);
 
-    char status[4];
-    sscanf(buffer, "RSA %3s %s %ld", status, fname, &fsize);
+    sscanf_ret = sscanf(buffer, "RSA %3s %s %ld", status, fname, &fsize);
 
-    if (strcmp(status, "NOK") == 0) {
+    if (strcmp(status, "NOK") == 0 || sscanf_ret != 3 ||
+        !check_fname_format(fname) || !valid_filesize(fsize)) {
         printf("There is no file to be sent, or a problem ocurred\n");
         close(TCP_fd);
         return;
@@ -513,7 +515,7 @@ void show_asset_command(char* token) {
         freeaddrinfo(TCP_res);
         close(TCP_fd);
 
-        getcwd(buffer, sizeof(buffer)); // Recycles the data_buffer
+        getcwd(buffer, sizeof(buffer));
         printf("File [%s] of size [%ldB] stored at %s\n", fname,fsize,buffer);
 
         return;
@@ -527,23 +529,23 @@ void bid_command(char* token) {
         return;
     }
 
-    char AID[4]; // AID is a 3 digit number
-    if ((token = strtok(NULL, " \n")) != NULL)
+    char AID[AID_LEN+1];
+    if ((token = strtok(NULL, " \n")) != NULL && check_AID_format(token))
         strcpy(AID, token);
     else {
         printf("AID argument missing\n");
         return;
     }
 
-    char value[9]; // Not sure what is the maximum value for bids
-    if ((token = strtok(NULL, " \n")) != NULL)
+    char value[MAX_VALUE_LEN+1];
+    if ((token = strtok(NULL, " \n")) != NULL && check_value_format(token))
         strcpy(value, token);
     else {
         printf("value argument missing\n");
         return;
     }
 
-    char BID_command[34];
+    char BID_command[STATUS_LEN+UID_LEN+PW_LEN+AID_LEN+MAX_VALUE_LEN+6];
     int command_len = snprintf(BID_command, sizeof(BID_command), "BID %s %s %s %s\n",
                                UID_current, password_current, AID, value);
 
@@ -597,17 +599,14 @@ void show_record_command(char *token){
     char AID[AID_LEN+1];
     int i;
 
-    if ((token = strtok(NULL, " \n")) != NULL)
+    if ((token = strtok(NULL, " \n")) != NULL && check_AID_format(token))
         strcpy(AID, token);
     else {
         printf("AID argument missing\n");
         return;
     }
-    if(strlen(AID)!=3){
-        printf("Err: AID must be a 3 digit number\n");
-        return;
-    }
-    char SRC_command[10]; 
+    
+    char SRC_command[STATUS_LEN+AID_LEN+3]; 
     snprintf(SRC_command, sizeof(SRC_command), "SRC %s\n", AID);
 
     n=sendto(UDP_fd,SRC_command,strlen(SRC_command),0,res->ai_addr,res->ai_addrlen);
