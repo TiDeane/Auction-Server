@@ -77,6 +77,10 @@ void login_command(char* buffer) {
         printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
+        return;
+    }
 }
 
 /* Logs out of the Auction Server. Command format is "logout" */ 
@@ -114,6 +118,10 @@ void logout_command() {
         printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
+        return;
+    }
 }
 
 /* Unregisters user from the Auction Server. Command format is "unregister" */ 
@@ -149,6 +157,10 @@ void unregister_command(){
     }
     else if (strncmp(buffer,"RUR ERR\n", 8) == 0){
         printf("Incorrect or badly formatted arguments received by server\n");
+        return;
+    }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
         return;
     }
 }
@@ -264,6 +276,10 @@ void open_command(char* buffer) {
         printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
+        return;
+    }
 }
 
 /* Closes an ongoing auction. Command format is "close AID" */
@@ -332,6 +348,10 @@ void close_command(char* buffer) {
         printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
+        return;
+    }
 }
 
 /* Lists the current user's auctions. Format is "myauctions" or "ma" */ 
@@ -372,6 +392,10 @@ void myauctions_command(){
     }
     else if (strncmp(buffer,"RMA ERR\n", 8) == 0){
         printf("Incorrect or badly formatted arguments received by server\n");
+        return;
+    }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
         return;
     }
 }
@@ -416,6 +440,10 @@ void mybids_command(){
         printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
+        return;
+    }
 }
 
 /* Lists all currently active auctions. Command format is "list" or "l" */ 
@@ -445,6 +473,10 @@ void list_command() {
     }
     else if (strncmp(buffer,"RLS ERR\n", 8) == 0){
         printf("Incorrect or badly formatted arguments received by server\n");
+        return;
+    }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
         return;
     }
 }
@@ -491,10 +523,13 @@ void show_asset_command(char* buffer) {
 
     sscanf_ret = sscanf(buffer, "RSA %s %s %ld", status, fname, &fsize);
 
-
     if (sscanf_ret == 0 || strcmp(status, "NOK") == 0) {
         printf("There is no file to be sent, or a problem ocurred\n");
         close(TCP_fd);
+        return;
+    }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
         return;
     }
     else if (strcmp(status,"ERR\n") == 0){
@@ -653,6 +688,10 @@ void bid_command(char* buffer) {
         printf("Incorrect or badly formatted arguments received by server\n");
         return;
     }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
+        return;
+    }
 }
 
 /* Shows the record of the given auction. Format is "show_asset AID" or "sa AID" */
@@ -699,6 +738,10 @@ void show_record_command(char *buffer){
     }
     else if (strncmp(buffer,"RCL ERR\n", 8) == 0){
         printf("Incorrect or badly formatted arguments received by server\n");
+        return;
+    }
+    else if (strncmp(buffer,"ERR\n", 4) == 0){
+        printf("Unexpected protocol message received by server\n");
         return;
     }
 }

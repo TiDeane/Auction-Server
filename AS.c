@@ -899,6 +899,28 @@ void list_command(char* buffer) {
     return;
 }
 
+void bid_command(char* buffer, int new_fd) {
+    struct dirent **filelist;
+    char UID[UID_LEN+1];
+    char password[PW_LEN+1];
+    int AID, value, sscanf_ret, n;
+
+    printf("buffer inside command: %s\n", buffer);
+
+    sscanf_ret = sscanf(buffer,"BID %s %s %d %d",UID,password,&AID,&value);
+
+    if (sscanf_ret != 4||!check_UID_format(UID)||!check_password_format(password)||!valid_AID(AID)||!valid_value(value)) {
+        char response[] = "RBD ERR\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
+    char response[] = "ERR\n";
+    n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+    if(n==-1)/*error*/exit(1);
+    return;
+}
+
 void show_record_command(char* buffer) {
     struct dirent **bidlist;
     int sscanf_ret, n, n_bids, len, AID, timeactive, bids_read = 0;
@@ -1001,6 +1023,7 @@ void show_record_command(char* buffer) {
     if(n==-1) /*error*/ exit(1);
     return;
 }
+
 
 int main(int argc, char **argv) {
     pid_t pid;
@@ -1138,11 +1161,15 @@ int main(int argc, char **argv) {
                     n=read(new_fd,buffer,BUFSIZE); // Read multiple times?
                     if(n==-1)/*error*/exit(1);
 
+                    printf("buffer after reading: %s\n",buffer);//
+
                     if(n>=0) {
                         if(strlen(buffer)>0)
                             buffer[n-1]=0;
                         
+                        printf("buffer before getting command: %s\n",buffer);
                         sscanf(buffer, "%s ", command);
+                        printf("buffer after getting command: %s\n",buffer);
 
                         if((pid=fork())==-1) /*error*/ exit(1);
                         else if (pid==0) { // Child process
@@ -1156,11 +1183,11 @@ int main(int argc, char **argv) {
                                 show_asset_command(buffer, new_fd);
                             }
                             else if (strcmp(command, "BID") == 0) {
-                                // Bid command
+                                bid_command(buffer, new_fd);
                             } else {
-                                snprintf(buffer,sizeof(buffer), "ERR\n");
-                                //write to TCP_fd
-                                //if(n==-1) /*error*/ exit(1);
+                                strcpy(buffer, "ERR\n");
+                                n = write(new_fd, buffer, strlen(buffer));
+                                if (n == -1) /*error*/ exit(1);
                             }
                             close(new_fd);
                             exit(0); // Ends child process
