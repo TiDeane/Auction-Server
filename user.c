@@ -1,9 +1,5 @@
 #include "utils.h"
 
-#define PORT "58002"
-
-#define BUFSIZE 6010
-
 int UDP_fd,TCP_fd,errcode;
 ssize_t n;
 socklen_t addrlen;
@@ -329,7 +325,7 @@ void close_command(char* buffer) {
         return;
     }
     else if(strncmp(buffer,"RCL EAU\n", 8) == 0){
-        printf("The auction EAU does not exist\n");
+        printf("The auction %03d does not exist\n",AID);
         return;
     }
     else if(strncmp(buffer,"RCL EOW\n", 8) == 0){
@@ -337,7 +333,7 @@ void close_command(char* buffer) {
         return;
     }
     else if(strncmp(buffer,"RCL END\n", 8) == 0){
-        printf("The auction has already finished\n");
+        printf("The auction has already ended\n");
         return;
     }
     else if(strncmp(buffer,"RCL NLG\n", 8) == 0){

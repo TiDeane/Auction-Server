@@ -19,6 +19,10 @@
 #include <errno.h>
 #include <time.h>
 
+#define PORT "58002"
+
+#define BUFSIZE 6010
+
 #define STATUS_LEN 3
 #define AID_LEN 3
 #define UID_LEN 6
