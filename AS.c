@@ -7,6 +7,7 @@
 
 int UDP_fd,TCP_fd,errcode;
 char buffer[BUFSIZE];
+char host[NI_MAXHOST], service[NI_MAXSERV];
 
 socklen_t addrlen, TCP_addrlen;
 struct addrinfo hints,*res;
@@ -123,6 +124,34 @@ void end_auction(int AID, long duration_sec, time_t current_time) {
     fclose(end_file);
 }
 
+void print_login(char* UID, char* password) {
+    printf("Received login command with UID [%s] and password [%s]\n", UID, password);
+    errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+    if(errcode==0)
+        printf("   From [%s:%s]\n",host,service);
+}
+
+void print_logout(char* UID, char* password) {
+    printf("Received logout command with UID [%s] and password [%s]\n", UID, password);
+    errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+    if(errcode==0)
+        printf("   From [%s:%s]\n",host,service);
+}
+
+void print_unregister(char* UID, char* password) {
+    printf("Received unregister command with UID [%s] and password [%s]\n", UID, password);
+    errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+    if(errcode==0)
+        printf("   From [%s:%s]\n",host,service);
+}
+
+void print_open(char* UID, char* password, char* name, int svalue, int timeactive, char* fname, long fsize) {
+    printf("Received open command with UID [%s], password [%s], auction name [%s], start value [%d], duration [%d], file name [%s] and file size [%ld]\n", UID, password,name, svalue, timeactive, fname, fsize);
+    errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+    if(errcode==0)
+        printf("   From [%s:%s]\n",host,service);
+}
+
 void login_command(char *buffer) {
     char UID[UID_LEN+1], password[PW_LEN+1];
     char UID_directory[UID_DIR_PATH_LEN+1];
@@ -134,10 +163,21 @@ void login_command(char *buffer) {
 
     sscanf_ret = sscanf(buffer, "LIN %s %s\n", UID, password);
 
+    if (verbose_mode)
+        print_login(UID, password);
+
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLI ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Invalid arguments From [%s:%s] in login command, sending response %s",host,service,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 
@@ -170,6 +210,14 @@ void login_command(char *buffer) {
         char response[] = "RLI REG\n"; // New user registered
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("New user with UID [%s] and password [%s] registered, sending response %s",UID,password,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     } else { // User directory already exists, has registered before
 
@@ -201,6 +249,13 @@ void login_command(char *buffer) {
                 n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
                 if(n==-1) /*error*/ exit(1);
 
+                if (verbose_mode) {
+                    errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+                    if(errcode==0) {
+                        printf("Sucessfully logged in user [%s] using password [%s], sending response %s",UID,password,response);
+                        printf("   To [%s:%s]\n",host,service);
+                    }
+                }
                 fclose(login_file);
                 fclose(pass_file);
                 return;
@@ -209,6 +264,13 @@ void login_command(char *buffer) {
                 n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
                 if(n==-1) /*error*/ exit(1);
 
+                if (verbose_mode) {
+                    errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+                    if(errcode==0) {
+                        printf("Password [%s] is incorrect for user [%s], sending response %s",password,UID,response);
+                        printf("   To [%s:%s]\n",host,service);
+                    }
+                }
                 fclose(pass_file);
                 return;
             }
@@ -221,6 +283,14 @@ void login_command(char *buffer) {
             char response[] = "RLI REG\n"; // Successfully registered again
             n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
             if(n==-1) /*error*/ exit(1);
+
+            if (verbose_mode) {
+                errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+                if(errcode==0) {
+                    printf("Returning user [%s] sucessfully registered with password [%s], sending response %s",UID,password,response);
+                    printf("   To [%s:%s]\n",host,service);
+                }
+            }
             return;
         }
     }
@@ -236,10 +306,21 @@ void logout_command(char* buffer) {
 
     sscanf_ret = sscanf(buffer, "LOU %s %s\n", UID, password);
 
+    if (verbose_mode)
+        print_logout(UID, password);
+
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLO ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Invalid arguments From [%s:%s] in logout command, sending response %s",host,service,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 
@@ -249,6 +330,14 @@ void logout_command(char* buffer) {
         char response[] = "RLO UNR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Cannot logout because user [%s] is not registered, sending response %s",UID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 
@@ -260,11 +349,27 @@ void logout_command(char* buffer) {
         char response[] = "RLO OK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Successfully logged out user [%s], sending response %s",UID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     } else { // User is not logged in
         char response[] = "RLO NOK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Cannot logout because user [%s] is not logged in, sending response %s",UID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 }
@@ -278,10 +383,21 @@ void unregister_command(char* buffer) {
 
     sscanf_ret = sscanf(buffer, "UNR %s %s\n", UID, password);
 
+    if (verbose_mode)
+        print_unregister(UID, password);
+
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RUR ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Invalid arguments From [%s:%s] in logout command, sending response %s",host,service,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 
@@ -291,6 +407,14 @@ void unregister_command(char* buffer) {
         char response[] = "RUR UNR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Cannot unregister because user [%s] was not registered, sending response %s",UID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 
@@ -305,10 +429,26 @@ void unregister_command(char* buffer) {
         char response[] = "RUR OK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Successfully unregistered user [%s], sending response %s",UID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     } else {
         char response[] = "RUR NOK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Cannot unregister because user [%s] is not logged in, sending response %s",UID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         if(n==-1) /*error*/ exit(1);
         return;
     }
@@ -330,11 +470,22 @@ void open_command(char* buffer, int new_fd, int nread) {
 
     sscanf_ret = sscanf(buffer, "OPA %s %s %s %d %d %s %ld ", UID, password, name, &svalue, &timeactive, fname, &fsize);
 
+    if (verbose_mode)
+        print_open(UID, password, name, svalue, timeactive, fname, fsize);
+
     if (sscanf_ret != 7||!check_UID_format(UID)||!check_password_format(password)||!check_desc_name_format(name)||
         !valid_value(svalue)||!valid_timeactive(timeactive)||!valid_filesize(fsize)) {
         char response[] = "ROA ERR\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Invalid arguments From [%s:%s] in open command, sending response %s",host,service,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
     
@@ -343,6 +494,14 @@ void open_command(char* buffer, int new_fd, int nread) {
         char response[] = "ROA NLG\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Cannot open new auction because user [%s] is not logged in, sending response %s",UID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 
@@ -351,6 +510,14 @@ void open_command(char* buffer, int new_fd, int nread) {
         char response[] = "ROA NOK\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
+
+        if (verbose_mode) {
+            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+            if(errcode==0) {
+                printf("Could not open new auction, sending response %s",response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 
@@ -447,6 +614,13 @@ void open_command(char* buffer, int new_fd, int nread) {
     n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
     if(n==-1)/*error*/exit(1);
 
+    if (verbose_mode) {
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+        if(errcode==0) {
+            printf("User [%s] successsfully opened auction [%03d] with asset [%s], sending response %s",UID,AID,fname,response);
+            printf("   To [%s:%s]\n",host,service);
+        }
+    }
     return;
 }
 
@@ -1148,6 +1322,14 @@ int main(int argc, char **argv) {
                                 char response[] = "ERR\n";
                                 n=sendto(UDP_fd,response,4,0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
                                 if(n==-1) /*error*/ exit(1);
+
+                                if (verbose_mode) {
+                                    errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+                                    if(errcode==0) {
+                                        printf("Received unexpected protocol message\n");
+                                        printf("   From [%s:%s]\n",host,service);
+                                    }
+                                }
                             }
                             exit(0); // Ends child process
                         }
@@ -1201,13 +1383,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-
-
-/*
-I'm pretty sure this is used for verbose mode
-
-char host[NI_MAXHOST], service[NI_MAXSERV];
-errcode=getnameinfo( (struct sockaddr *) &UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
-if(errcode==0)
-    printf("       Sent by [%s:%s]\n",host,service);
-*/
