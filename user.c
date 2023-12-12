@@ -598,12 +598,7 @@ void show_asset_command(char* buffer) {
         freeaddrinfo(TCP_res);
         close(TCP_fd);
 
-        bzero(buffer,BUFSIZE);
-        if (getcwd(buffer, sizeof(buffer)) == NULL) {
-            perror("getcwd error");
-        } else {
-            printf("buffer: %s\n", buffer);
-        }
+        getcwd(buffer, BUFSIZE);
         printf("File [%s] of size [%ldB] stored at %s\n", fname,fsize,buffer);
 
         return;

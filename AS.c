@@ -1155,21 +1155,17 @@ int main(int argc, char **argv) {
                 }
                 if(FD_ISSET(TCP_fd,&testfds)) // Received from TCP
                 {
-                    socklen_t TCP_addrlen = sizeof(TCP_addr);
+                    TCP_addrlen = sizeof(TCP_addr);
                     if((new_fd=accept(TCP_fd,(struct sockaddr*)&TCP_addr,&TCP_addrlen))==-1)
                         /*error*/exit(1);
                     n=read(new_fd,buffer,BUFSIZE); // Read multiple times?
                     if(n==-1)/*error*/exit(1);
 
-                    printf("buffer after reading: %s\n",buffer);//
-
                     if(n>=0) {
                         if(strlen(buffer)>0)
                             buffer[n-1]=0;
                         
-                        printf("buffer before getting command: %s\n",buffer);
                         sscanf(buffer, "%s ", command);
-                        printf("buffer after getting command: %s\n",buffer);
 
                         if((pid=fork())==-1) /*error*/ exit(1);
                         else if (pid==0) { // Child process
