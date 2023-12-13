@@ -40,6 +40,10 @@
 #define AUC_AID_DIR_PATH_LEN (AUC_AID_DIR_PATH_LEN+4)
 
 
+#define AUCTION_DIR_PATH_LEN (AID_LEN+6)
+#define AUCTION_AID_DIR_PATH_LEN (AUCTION_DIR_PATH_LEN+7)
+#define AUCTION_BID_DIR_PATH_LEN (AUCTION_DIR_PATH_LEN+7) 
+
 bool check_UID_format(char* UID);
 bool check_password_format(char* password);
 bool check_fname_format(char* fname);

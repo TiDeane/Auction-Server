@@ -590,6 +590,133 @@ void list_command(char* buffer) {
     return;
 }
 
+<<<<<<< Updated upstream
+=======
+void bid_command(char* buffer, int new_fd) {
+    char UID[UID_LEN+1];
+    char password[PW_LEN+1];
+    int AID, value, sscanf_ret, n;
+    char dirname[32];
+    char pathname[32];
+    int info_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
+                MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
+    char info[info_size+1];
+    char auction_host_UID[UID_LEN+1];
+    char auction_name[MAX_DESC_NAME_LEN+1];
+    char auction_fname[MAX_FNAME_LEN+1];
+    char auction_value [MAX_VALUE_LEN+1]; // Used for the auction's start value and the bids' value
+    char auction_sdate[DATE_LEN+1]; // Used for the auction's start date and the bids' date
+    char auction_stime[TIME_LEN+1]; // Used for the auction's start time and the bids' time
+    char auction_duration_sec[MAX_DURATION_LEN+1]; // Used for the auction's time active and the bids' time
+    long stime_seconds;
+    char date_time[DATE_LEN+TIME_LEN+2];
+    char sfilecontents[UID_LEN+MAX_VALUE_LEN+
+                       MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8];
+
+    sscanf_ret = sscanf(buffer,"BID %s %s %d %d",UID,password,&AID,&value);
+    if (sscanf_ret != 4||!check_UID_format(UID)||!check_password_format(password)||!valid_AID(AID)||!valid_value(value)) {
+        char response[] = "RBD ERR\n";
+        n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        if(n==-1)/*error*/exit(1);
+        return;
+    }
+    
+    sprintf(dirname,"AUCTIONS/%03d",AID);
+    if (!dir_exists(dirname)) { // Auction doesn't exists
+        char response[] = "RBD NOK\n";
+        n=write(new_fd,response,strlen(response));
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+    sprintf(pathname,"AUCTIONS/%03d/END_%03d.txt",AID,AID);
+    if(file_exists(pathname)){
+        char response[] = "RBD NOK\n";
+        n=write(new_fd,response,strlen(response));
+        if(n==-1) /*error*/ exit(1);
+        return;
+    }
+
+    sprintf(pathname,"AUCTIONS/%03d/START_%03d.txt",AID,AID);
+    FILE *start_file = fopen(pathname, "r");
+    if (start_file == NULL) {
+        perror("Error opening the START file");
+        return;
+    }
+    fread(info,1,info_size,start_file);
+    fclose(start_file); 
+
+    sscanf(info,"%s %s %s %s %s %s %s %ld",auction_host_UID,auction_name,auction_fname,
+            auction_value,auction_duration_sec,auction_sdate,auction_stime,&stime_seconds);
+    if(strcmp(auction_host_UID,UID)==0){    //Auction is hosted by the user itself
+        char response[] = "RBD ILG\n";
+        n = write(new_fd, response, strlen(response));
+        if (n == -1) /*error*/ exit(1); 
+        return;
+    }  
+    int current_auction_value = atoi(auction_value);
+    if(current_auction_value>value){
+        char response[] = "RBD REF\n";
+        n = write(new_fd, response, strlen(response));
+        if (n == -1) /*error*/ exit(1); 
+        return;
+    }
+    start_file = fopen(pathname, "r+"); // Reopen the file to update it
+    if (start_file == NULL) {
+        perror("Error opening the START file");
+        return;
+    }
+
+    auction_host_UID[UID_LEN] = '\0'; // Null-terminate the strings
+    auction_name[MAX_DESC_NAME_LEN] = '\0';
+    auction_fname[MAX_FNAME_LEN] = '\0';
+    sprintf(info, "%s %s %s %d %s %s %s %ld", auction_host_UID, auction_name, auction_fname,
+    value, auction_duration_sec, auction_sdate, auction_stime, stime_seconds);
+    fwrite(info, 1, info_size, start_file);
+    fclose(start_file);
+
+    sprintf(pathname, "AUCTIONS/%03d/BIDS/%d.txt", AID, value);
+    start_file = fopen(pathname, "wb");
+    if (start_file == NULL) {
+        sprintf(dirname, "AUCTIONS/%03d/BID/", AID);
+        remove(dirname);
+        perror("Error creating the login file");
+        return;
+    }
+
+    time_t fulltime = time(NULL);
+    struct tm *timeinfo = gmtime(&fulltime);
+    if (timeinfo != NULL)
+        strftime(date_time, sizeof(date_time), "%Y-%m-%d %H:%M:%S", timeinfo);
+    else
+        return;
+
+    sprintf(sfilecontents,"%s %d %s %ld",
+            UID,value,date_time,fulltime);
+    fwrite(sfilecontents,1,strlen(sfilecontents),start_file);
+    fclose(start_file);
+
+    sprintf(pathname, "USERS/%s/BIDDED/%03d.txt", UID, AID);
+    start_file = fopen(pathname, "wb");
+    if (start_file == NULL) {
+        sprintf(dirname, "USERS/%s/BIDDED/", UID);
+        remove(dirname);
+        perror("Error creating the login file");
+        return;
+    }
+    sprintf(sfilecontents,"%03d %d %s %ld",
+            AID,value,date_time,fulltime);
+    fwrite(sfilecontents,1,strlen(sfilecontents),start_file);
+    fclose(start_file);
+
+    
+
+    char response[] = "RBD ACC\n";
+    n = write(new_fd, response, strlen(response));
+    if (n == -1) /*error*/ exit(1);
+    return; 
+}
+
+>>>>>>> Stashed changes
 void show_record_command(char* buffer) {
     struct dirent **bidlist;
     int n, n_bids, len, bids_read = 0;
