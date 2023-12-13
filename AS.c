@@ -1487,6 +1487,7 @@ void show_record_command(char* buffer) {
 int main(int argc, char **argv) {
     pid_t pid;
     fd_set inputs, testfds;
+    struct timeval timeout;
 
     int out_fds, ret, n, new_fd;
 
@@ -1510,8 +1511,11 @@ int main(int argc, char **argv) {
     hints.ai_socktype=SOCK_DGRAM;
     hints.ai_flags=AI_PASSIVE|AI_NUMERICSERV;
 
-    if((errcode=getaddrinfo(NULL,ASport,&hints,&res))!=0)
+    if((errcode=getaddrinfo(NULL,ASport,&hints,&res))!=0) {
+        sprintf(buffer,"getaddrinfo error\n");
+        write(1,buffer,strlen(buffer));
         exit(1);
+    }
 
     UDP_fd=socket(res->ai_family,res->ai_socktype,res->ai_protocol);
     if(UDP_fd==-1)
@@ -1535,11 +1539,17 @@ int main(int argc, char **argv) {
     TCP_hints.ai_socktype=SOCK_STREAM;//TCP socket
     TCP_hints.ai_flags=AI_PASSIVE;
     
-    errcode=getaddrinfo(NULL,ASport,&TCP_hints,&TCP_res);
-    if (errcode!=0) /*error*/ exit(1);
+    if(getaddrinfo(NULL,ASport,&TCP_hints,&TCP_res) != 0) {
+        sprintf(buffer,"getaddrinfo error\n");
+        write(1,buffer,strlen(buffer));
+        exit(1);
+    }
 
-    if(bind(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen) == -1)
-        exit(1); //error
+    if(bind(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen) == -1) {
+        sprintf(buffer,"Bind error TCP server\n");
+        write(1,buffer,strlen(buffer));
+        exit(1);
+    }
     freeaddrinfo(TCP_res);
     
     if(listen(TCP_fd,5)==-1)/*error*/exit(1);
@@ -1557,10 +1567,15 @@ int main(int argc, char **argv) {
     while(1)
     {
         testfds = inputs; // Reload mask
-        out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,NULL);
+        memset((void *)&timeout,0,sizeof(timeout));
+        timeout.tv_sec=10;
+        out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
 
         switch(out_fds)
         {
+            case 0:
+                // Timeout event
+                break;
             case -1:
                 perror("select");
                 exit(1);
