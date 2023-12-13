@@ -218,8 +218,10 @@ void login_command(char *buffer) {
 
     sscanf_ret = sscanf(buffer, "LIN %s %s\n", UID, password);
 
-    if (verbose_mode)
+    if (verbose_mode) {
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         print_login(UID, password);
+    }
 
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLI ERR\n";
@@ -227,7 +229,6 @@ void login_command(char *buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Invalid arguments from [%s:%s] in login command, sending response %s",host,service,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -267,7 +268,6 @@ void login_command(char *buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("New user with UID [%s] and password [%s] registered, sending response %s",UID,password,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -305,7 +305,6 @@ void login_command(char *buffer) {
                 if(n==-1) /*error*/ exit(1);
 
                 if (verbose_mode) {
-                    errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
                     if(errcode==0) {
                         printf("Sucessfully logged in user [%s] using password [%s], sending response %s",UID,password,response);
                         printf("   To [%s:%s]\n",host,service);
@@ -320,7 +319,6 @@ void login_command(char *buffer) {
                 if(n==-1) /*error*/ exit(1);
 
                 if (verbose_mode) {
-                    errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
                     if(errcode==0) {
                         printf("Password [%s] is incorrect for user [%s], sending response %s",password,UID,response);
                         printf("   To [%s:%s]\n",host,service);
@@ -340,7 +338,6 @@ void login_command(char *buffer) {
             if(n==-1) /*error*/ exit(1);
 
             if (verbose_mode) {
-                errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
                 if(errcode==0) {
                     printf("Returning user [%s] sucessfully registered with password [%s], sending response %s",UID,password,response);
                     printf("   To [%s:%s]\n",host,service);
@@ -361,8 +358,10 @@ void logout_command(char* buffer) {
 
     sscanf_ret = sscanf(buffer, "LOU %s %s\n", UID, password);
 
-    if (verbose_mode)
+    if (verbose_mode) {
         print_logout(UID, password);
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+    }
 
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLO ERR\n";
@@ -370,7 +369,6 @@ void logout_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Invalid arguments from [%s:%s] in logout command, sending response %s",host,service,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -387,7 +385,6 @@ void logout_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Cannot logout because user [%s] is not registered, sending response %s",UID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -406,7 +403,6 @@ void logout_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Successfully logged out user [%s], sending response %s",UID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -419,7 +415,6 @@ void logout_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Cannot logout because user [%s] is not logged in, sending response %s",UID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -438,8 +433,10 @@ void unregister_command(char* buffer) {
 
     sscanf_ret = sscanf(buffer, "UNR %s %s\n", UID, password);
 
-    if (verbose_mode)
+    if (verbose_mode) {
         print_unregister(UID, password);
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
+    }
 
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RUR ERR\n";
@@ -447,7 +444,6 @@ void unregister_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Invalid arguments from [%s:%s] in logout command, sending response %s",host,service,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -464,7 +460,6 @@ void unregister_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Cannot unregister because user [%s] was not registered, sending response %s",UID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -486,7 +481,6 @@ void unregister_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Successfully unregistered user [%s], sending response %s",UID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -498,7 +492,6 @@ void unregister_command(char* buffer) {
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Cannot unregister because user [%s] is not logged in, sending response %s",UID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -525,8 +518,10 @@ void open_command(char* buffer, int new_fd, int nread) {
 
     sscanf_ret = sscanf(buffer, "OPA %s %s %s %d %d %s %ld ", UID, password, name, &svalue, &timeactive, fname, &fsize);
 
-    if (verbose_mode)
+    if (verbose_mode) {
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         print_open(UID, password, name, svalue, timeactive, fname, fsize);
+    }
 
     if (sscanf_ret != 7||!check_UID_format(UID)||!check_password_format(password)||!check_desc_name_format(name)||
         !valid_value(svalue)||!valid_timeactive(timeactive)||!valid_filesize(fsize)) {
@@ -535,7 +530,6 @@ void open_command(char* buffer, int new_fd, int nread) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Invalid arguments from [%s:%s] in open command, sending response %s",host,service,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -551,7 +545,6 @@ void open_command(char* buffer, int new_fd, int nread) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Cannot open new auction because user [%s] is not logged in, sending response %s",UID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -567,7 +560,6 @@ void open_command(char* buffer, int new_fd, int nread) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Could not open new auction, sending response %s",response);
                 printf("   To [%s:%s]\n",host,service);
@@ -670,7 +662,6 @@ void open_command(char* buffer, int new_fd, int nread) {
     if(n==-1)/*error*/exit(1);
 
     if (verbose_mode) {
-        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         if(errcode==0) {
             printf("User [%s] successsfully opened auction [%03d] with asset [%s], sending response %s",UID,AID,fname,response);
             printf("   To [%s:%s]\n",host,service);
@@ -695,8 +686,10 @@ void close_command(char* buffer, int new_fd) {
 
     sscanf_ret = sscanf(buffer,"CLS %s %s %d\n", UID_given, password, &AID);
 
-    if (verbose_mode)
+    if (verbose_mode) {
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         print_close(UID_given, password, AID);
+    }
 
     if (sscanf_ret != 3 || !check_UID_format(UID_given) ||
         !check_password_format(password) || !valid_AID(AID)) {
@@ -705,7 +698,6 @@ void close_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Invalid arguments from [%s:%s] in close command, sending response %s",host,service,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -721,7 +713,6 @@ void close_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Could not close auction because user [%s] does not exist, sending response %s\n",UID_given,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -744,7 +735,6 @@ void close_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Could not close auction because password [%s] for user [%s] is incorrect, sending response %s",password,UID_given,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -761,7 +751,6 @@ void close_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Could not close auction because user [%s] is not logged in, sending response %s",UID_given,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -776,7 +765,6 @@ void close_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Could not close [%03d] because it doesn't exist, sending response %s",AID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -809,7 +797,6 @@ void close_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Could not close auction [%03d] because it is not owned by [%s], sending response %s",AID,UID_given,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -825,12 +812,11 @@ void close_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
-        if(errcode==0) {
-            printf("Could not close auction [%03d] because it has already ended, sending response %s",AID,response);
-            printf("   To [%s:%s]\n",host,service);
+            if(errcode==0) {
+                printf("Could not close auction [%03d] because it has already ended, sending response %s",AID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
         }
-    }
         return;
     } else {   
         end_auction(AID,end_sec_time,current_time);
@@ -840,7 +826,6 @@ void close_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Successfully closed auction [%03d], sending response %s",AID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -863,8 +848,10 @@ void show_asset_command(char* buffer, int new_fd) {
 
     sscanf_ret = sscanf(buffer, "SAS %d\n", &AID);
 
-    if (verbose_mode)
+    if (verbose_mode) {
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         print_show_asset(AID);
+    }
 
     if (sscanf_ret != 1 || !valid_AID(AID)) {
         char response[] = "RSA ERR\n";
@@ -872,7 +859,6 @@ void show_asset_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Invalid arguments from [%s:%s] in show asset command, sending response %s",host,service,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -906,7 +892,6 @@ void show_asset_command(char* buffer, int new_fd) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Could not find the auction's asset, sending response %s",response);
                 printf("   To [%s:%s]\n",host,service);
@@ -951,7 +936,6 @@ void show_asset_command(char* buffer, int new_fd) {
     fclose(file);
 
     if (verbose_mode) {
-        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         if(errcode==0)
             printf("Successfully sent auction [%03d]'s asset to [%s:%s]\n",AID,host,service);
     }
@@ -976,8 +960,10 @@ void myauctions_command(char* buffer) {
 
     sscanf_ret = sscanf(buffer, "LMA %s\n", UID);
 
-    if (verbose_mode)
+    if (verbose_mode) {
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         print_myauctions(UID);
+    }
 
     if (sscanf_ret != 1 || !check_UID_format(UID)) {
         char response[] = "RMA ERR\n";
@@ -985,7 +971,6 @@ void myauctions_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Invalid arguments from [%s:%s] in my auctions command, sending response %s",host,service,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -1001,7 +986,6 @@ void myauctions_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Couldn't list auctions because user [%s] is not logged in, sending response %s",UID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -1021,7 +1005,6 @@ void myauctions_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("User [%s] has not started any auctions, sending response %s",UID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -1077,7 +1060,6 @@ void myauctions_command(char* buffer) {
     if(n==-1) /*error*/ exit(1);
 
     if (verbose_mode) {
-        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         if(errcode==0) {
             printf("Successfully listed user [%s]'s auctions, sending response RMA OK followed by the list\n",UID);
             printf("   To [%s:%s]\n",host,service);
@@ -1114,7 +1096,6 @@ void mybids_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Invalid arguments from [%s:%s] in my bids command, sending response %s",host,service,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -1130,12 +1111,11 @@ void mybids_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
-        if(errcode==0) {
-            printf("Couldn't list bids because user [%s] is not logged in, sending response %s",UID,response);
-            printf("   To [%s:%s]\n",host,service);
+            if(errcode==0) {
+                printf("Couldn't list bids because user [%s] is not logged in, sending response %s",UID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
         }
-    }
         return;
     }
 
@@ -1150,12 +1130,11 @@ void mybids_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
-        if(errcode==0) {
-            printf("User [%s] hasn't placed any bids, sending response %s",UID,response);
-            printf("   To [%s:%s]\n",host,service);
+            if(errcode==0) {
+                printf("User [%s] hasn't placed any bids, sending response %s",UID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
         }
-    }
         return;
     } else if (n_entries<=0)
         return;
@@ -1206,7 +1185,6 @@ void mybids_command(char* buffer) {
     if(n==-1) /*error*/ exit(1);
 
     if (verbose_mode) {
-        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         if(errcode==0) {
             printf("Successfully listed user [%s]'s bids, sending response RMB OK followed by list\n",UID);
             printf("   To [%s:%s]\n",host,service);
@@ -1231,8 +1209,10 @@ void list_command(char* buffer) {
     char AID_state[AID_LEN+3];
     time_t current_time;
 
-    if (verbose_mode)
+    if (verbose_mode) {
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         print_list();
+    }
 
     sprintf(dirname,"AUCTIONS/");
     n_entries = scandir(dirname, &filelist, NULL, alphasort);
@@ -1246,7 +1226,6 @@ void list_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("No auctions have been started yet, sending response %s",response);
                 printf("   To [%s:%s]\n",host,service);
@@ -1302,21 +1281,20 @@ void list_command(char* buffer) {
     if(n==-1) /*error*/ exit(1);
 
     if (verbose_mode) {
-        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         if(errcode==0) {
             printf("Successfully listed all auctions, sending response RLS OK followed by the list\n");
             printf("   To [%s:%s]\n",host,service);
         }
     }
-
     return;
 }
 
 void bid_command(char* buffer, int new_fd) {
+    struct dirent **bidlist;
     char UID[UID_LEN+1];
     char password[PW_LEN+1];
-    int AID, value, sscanf_ret, n;
-    char dirname[32];
+    int AID,value,sscanf_ret,n,auction_value,biggest_bid,n_bids,len,i;
+    char dirname[21];
     char pathname[32];
     int info_size = UID_LEN+MAX_DESC_NAME_LEN+MAX_FNAME_LEN+MAX_VALUE_LEN+
                 MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8;
@@ -1324,19 +1302,19 @@ void bid_command(char* buffer, int new_fd) {
     char auction_host_UID[UID_LEN+1];
     char auction_name[MAX_DESC_NAME_LEN+1];
     char auction_fname[MAX_FNAME_LEN+1];
-    char auction_value [MAX_VALUE_LEN+1]; // Used for the auction's start value and the bids' value
-    char auction_sdate[DATE_LEN+1]; // Used for the auction's start date and the bids' date
-    char auction_stime[TIME_LEN+1]; // Used for the auction's start time and the bids' time
-    char auction_duration_sec[MAX_DURATION_LEN+1]; // Used for the auction's time active and the bids' time
-    long stime_seconds;
+    char auction_sdate[DATE_LEN+1];
+    char auction_stime[TIME_LEN+1];
+    long auction_duration_sec, stime_seconds;
     char date_time[DATE_LEN+TIME_LEN+2];
-    char sfilecontents[UID_LEN+MAX_VALUE_LEN+
+    char filecontents[UID_LEN+MAX_VALUE_LEN+
                        MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8];
 
     sscanf_ret = sscanf(buffer,"BID %s %s %d %d",UID,password,&AID,&value);
     
-    if (verbose_mode)
+    if (verbose_mode) {
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         print_bid(UID,password,AID,value);
+    }
 
     if (sscanf_ret != 4||!check_UID_format(UID)||!check_password_format(password)||!valid_AID(AID)||!valid_value(value)) {
         char response[] = "RBD ERR\n";
@@ -1344,27 +1322,41 @@ void bid_command(char* buffer, int new_fd) {
         if(n==-1)/*error*/exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
-                printf("Invalid arguments from [%s:%s] in my bids command, sending response %s",host,service,response);
+                printf("Invalid arguments from [%s:%s] in bid command, sending response %s",host,service,response);
                 printf("   To [%s:%s]\n",host,service);
             }
         }
         return;
     }
 
+    sprintf(dirname, "AUCTIONS/%03d/",AID);
     sprintf(pathname,"AUCTIONS/%03d/END_%03d.txt",AID,AID);
-    if (file_exists(pathname)) {
+    if (!dir_exists(dirname)||file_exists(pathname)) {
         char response[] = "RBD NOK\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
+
+        if (verbose_mode) {
+            if(errcode==0) {
+                printf("Could not bid because auction has already ended, sending response %s",response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
     sprintf(pathname,"USERS/%s/%s_login.txt",UID,UID);
     if (!file_exists(pathname)) {
-        char response[] = "RBD NOK\n";
+        char response[] = "RBD NLG\n";
         n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
         if(n==-1)/*error*/exit(1);
+
+        if (verbose_mode) {
+            if(errcode==0) {
+                printf("Could not bid because user [%s] is not logged in, sending response %s",UID,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 
@@ -1377,41 +1369,70 @@ void bid_command(char* buffer, int new_fd) {
     fread(info,1,info_size,start_file);
     fclose(start_file); 
 
-    sscanf(info,"%s %s %s %s %s %s %s %ld",auction_host_UID,auction_name,auction_fname,
-            auction_value,auction_duration_sec,auction_sdate,auction_stime,&stime_seconds);
+    sscanf(info,"%s %s %s %d %ld %s %s %ld",auction_host_UID,auction_name,auction_fname,
+            &auction_value,&auction_duration_sec,auction_sdate,auction_stime,&stime_seconds);
     if(strcmp(auction_host_UID,UID)==0){    //Auction is hosted by the user itself
         char response[] = "RBD ILG\n";
         n = write(new_fd, response, strlen(response));
         if (n == -1) /*error*/ exit(1); 
+
+        if (verbose_mode) {
+            if(errcode==0) {
+                printf("Could not bid because the auction is owned by the user trying to bid, sending response %s",response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
-    }  
-    int current_auction_value = atoi(auction_value);
-    if(current_auction_value>value){
+    }
+    if(auction_value>value){
         char response[] = "RBD REF\n";
         n = write(new_fd, response, strlen(response));
-        if (n == -1) /*error*/ exit(1); 
-        return;
-    }
-    start_file = fopen(pathname, "r+"); // Reopen the file to update it
-    if (start_file == NULL) {
-        perror("Error opening the START file");
+        if (n == -1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            if(errcode==0) {
+                printf("Bid refused because its value is smaller than the auction's starting value, sending response %s",response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 
-    auction_host_UID[UID_LEN] = '\0'; // Null-terminate the strings
-    auction_name[MAX_DESC_NAME_LEN] = '\0';
-    auction_fname[MAX_FNAME_LEN] = '\0';
-    sprintf(info, "%s %s %s %d %s %s %s %ld", auction_host_UID, auction_name, auction_fname,
-    value, auction_duration_sec, auction_sdate, auction_stime, stime_seconds);
-    fwrite(info, 1, info_size, start_file);
-    fclose(start_file);
+    sprintf(pathname,"AUCTIONS/%03d/BIDS/",AID);
+    n_bids = scandir(pathname, &bidlist, NULL, alphasort);
+    if (n_bids<=0)
+        return;
+        
+    len = strlen(bidlist[n_bids-1]->d_name);
+    if (len == 10) {
+        sscanf(bidlist[n_bids-1]->d_name, "%d.txt", &biggest_bid);
+        if (value<=biggest_bid) {
+            char response[] = "RBD REF\n";
+            n=write(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+            if(n==-1)/*error*/exit(1);
 
-    sprintf(pathname, "AUCTIONS/%03d/BIDS/%d.txt", AID, value);
-    start_file = fopen(pathname, "wb");
-    if (start_file == NULL) {
-        sprintf(dirname, "AUCTIONS/%03d/BID/", AID);
-        remove(dirname);
-        perror("Error creating the login file");
+            for (i=0; i<n_bids; i++)
+                free(bidlist[n_bids]);
+            free(bidlist);
+
+            if (verbose_mode) {
+                if(errcode==0) {
+                    printf("Could not bid because value was smaller than (or equal to) the biggest bid, sending response %s",response);
+                    printf("   To [%s:%s]\n",host,service);
+                }
+            }
+            return;
+        }
+    }
+
+    for (i=0; i<n_bids; i++)
+        free(bidlist[n_bids]);
+    free(bidlist);
+
+    sprintf(pathname, "AUCTIONS/%03d/BIDS/%06d.txt", AID, value);
+    FILE *bid_file = fopen(pathname, "w");
+    if (bid_file == NULL) {
+        perror("Error creating the bid's file");
         return;
     }
 
@@ -1422,29 +1443,27 @@ void bid_command(char* buffer, int new_fd) {
     else
         return;
 
-    sprintf(sfilecontents,"%s %d %s %ld",
-            UID,value,date_time,fulltime);
-    fwrite(sfilecontents,1,strlen(sfilecontents),start_file);
-    fclose(start_file);
+    sprintf(filecontents,"%s %d %s %ld",UID,value,date_time,fulltime);
+    fwrite(filecontents,1,strlen(filecontents),bid_file);
+    fclose(bid_file);
 
     sprintf(pathname, "USERS/%s/BIDDED/%03d.txt", UID, AID);
-    start_file = fopen(pathname, "wb");
-    if (start_file == NULL) {
-        sprintf(dirname, "USERS/%s/BIDDED/", UID);
-        remove(dirname);
-        perror("Error creating the login file");
+    FILE *bidded_file = fopen(pathname, "w");
+    if (bidded_file == NULL) {
+        perror("Error creating the user's bidded file");
         return;
     }
-    sprintf(sfilecontents,"%03d %d %s %ld",
-            AID,value,date_time,fulltime);
-    fwrite(sfilecontents,1,strlen(sfilecontents),start_file);
-    fclose(start_file);
-
-    
 
     char response[] = "RBD ACC\n";
     n = write(new_fd, response, strlen(response));
     if (n == -1) /*error*/ exit(1);
+
+    if (verbose_mode) {
+        if(errcode==0) {
+            printf("User [%s] successfully placed a bid of value [%d] on auction [%03d], sending response %s",UID,value,AID,response);
+            printf("   To [%s:%s]\n",host,service);
+        }
+    }
     return; 
 }
 
@@ -1468,13 +1487,22 @@ void show_record_command(char* buffer) {
 
     sscanf_ret = sscanf(buffer, "SRC %03d", &AID);
 
-    if (verbose_mode)
+    if (verbose_mode) {
+        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         print_show_record(AID);
+    }
 
     if (sscanf_ret != 1 || !valid_AID(AID)) {
         char response[] = "RRC ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
         if(n==-1) /*error*/ exit(1);
+
+        if (verbose_mode) {
+            if(errcode==0) {
+                printf("Invalid arguments from [%s:%s] in show record command, sending response %s",host,service,response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
         return;
     }
 
@@ -1485,7 +1513,6 @@ void show_record_command(char* buffer) {
         if(n==-1) /*error*/ exit(1);
 
         if (verbose_mode) {
-            errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
             if(errcode==0) {
                 printf("Couldn't show record because auction [%03d] doesn't exist, sending response %s",AID,response);
                 printf("   To [%s:%s]\n",host,service);
@@ -1562,13 +1589,11 @@ void show_record_command(char* buffer) {
     if(n==-1) /*error*/ exit(1);
 
     if (verbose_mode) {
-        errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
         if(errcode==0) {
             printf("Successfully showed auction [%03d]'s record, sending response RRC OK and the auction's information\n",AID);
             printf("   To [%s:%s]\n",host,service);
         }
     }
-
     return;
 }
 
@@ -1644,6 +1669,8 @@ int main(int argc, char **argv) {
     if(listen(TCP_fd,5)==-1)/*error*/exit(1);
 
     if (verbose_mode) {
+        printf("The server is running on verbose mode! A short description of the received requests and the IP and port originating those requests will be displayed, as well as the responses to be sent to each IP and port.\n");
+        printf("--------------------------------\n");
         printf("Successfully set up TCP socket...\n");
         printf("Waiting for connections...\n");
     }

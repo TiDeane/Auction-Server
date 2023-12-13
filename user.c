@@ -661,7 +661,7 @@ void bid_command(char* buffer) {
         return;
     }
     else if (strncmp(buffer, "RBD REF\n", 8) == 0) {
-        printf("Bid was refused: a larger bid was previously placed\n");
+        printf("Bid was refused: a larger (or equal) bid was previously placed\n");
         close(TCP_fd);
         return;
     }
