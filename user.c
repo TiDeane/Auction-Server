@@ -17,6 +17,40 @@ char UID_current[UID_LEN+1];
 char password_current[PW_LEN+1];
 bool logged_in = false;
 
+int user_recvfrom(int sockfd, char* buffer) {
+    char in_str[128];
+    struct timeval timeout;
+    timeout.tv_sec = 10;
+
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(sockfd, &readfds);
+    FD_SET(0,&readfds);
+
+    int maxfd = (sockfd > 0) ? sockfd + 1 : 0 + 1;
+    int out_fds = select(maxfd, &readfds, NULL, NULL, &timeout);
+
+    if (out_fds == -1) {
+        perror("select");
+        return -1;
+    } else if (out_fds == 0) {
+        printf("Timeout occurred. No response received from server.\n");
+        return 0;
+    } else if (FD_ISSET(sockfd, &readfds)) {
+        int n = recvfrom(sockfd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
+        if (n == -1) {
+            perror("recvfrom");
+            return -1;
+        }
+        return n;
+    } else if (FD_ISSET(0, &readfds)) {
+        fgets(in_str, 50, stdin);
+        printf("---Input at keyboard: %s\n",in_str);
+        return -2;
+    }
+    return 0;
+}
+
 /* Logs into the Auction Server. Command format is "login UID password" */
 void login_command(char* buffer) {
     char UID[UID_LEN+1];
@@ -45,9 +79,9 @@ void login_command(char* buffer) {
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
-    (struct sockaddr*)&addr,&addrlen);
+    n=user_recvfrom(UDP_fd,buffer);
     if(n==-1) /*error*/ exit(1);
+    else if(n==0||n==-2) return; // Timeout or keyboard input
 
     if (strncmp(buffer, "RLI REG\n", 8) == 0) {
         printf("new user registered\n");
@@ -93,9 +127,9 @@ void logout_command() {
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
-    (struct sockaddr*)&addr,&addrlen);
+    n=user_recvfrom(UDP_fd,buffer);
     if(n==-1) /*error*/ exit(1);
+    else if(n==0||n==-2) return; // Timeout or keyboard input
 
     if (strncmp(buffer, "RLO OK\n", 7) == 0) {
         printf("successful logout\n");
@@ -134,9 +168,9 @@ void unregister_command(){
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
-    (struct sockaddr*)&addr,&addrlen);
+    n=user_recvfrom(UDP_fd,buffer);
     if(n==-1) /*error*/ exit(1);
+    else if(n==0||n==-2) return; // Timeout or keyboard input
 
     if(strncmp(buffer,"RUR OK\n", 7) == 0){
         logged_in = false;
@@ -365,9 +399,9 @@ void myauctions_command(){
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
-    (struct sockaddr*)&addr,&addrlen);
+    n=user_recvfrom(UDP_fd,buffer);
     if(n==-1) /*error*/ exit(1);
+    else if(n==0||n==-2) return; // Timeout or keyboard input
 
     if (buffer[n-1]=='\n')
         buffer[n]='\0';
@@ -411,9 +445,9 @@ void mybids_command(){
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
-    (struct sockaddr*)&addr,&addrlen);
+    n=user_recvfrom(UDP_fd,buffer);
     if(n==-1) /*error*/ exit(1);
+    else if(n==0||n==-2) return; // Timeout or keyboard input
 
     if (buffer[n-1]=='\n')
         buffer[n]='\0';
@@ -450,9 +484,9 @@ void list_command() {
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
-    (struct sockaddr*)&addr,&addrlen);
+    n=user_recvfrom(UDP_fd,buffer);
     if(n==-1) /*error*/ exit(1);
+    else if(n==0||n==-2) return; // Timeout or keyboard input
 
     if (buffer[n-1]=='\n')
         buffer[n]='\0';
@@ -705,9 +739,9 @@ void show_record_command(char *buffer){
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(UDP_fd,buffer,BUFSIZE,0,
-    (struct sockaddr*)&addr,&addrlen);
+    n=user_recvfrom(UDP_fd,buffer);
     if(n==-1) /*error*/ exit(1);
+    else if(n==0||n==-2) return; // Timeout or keyboard input
 
     if (buffer[n-1]=='\n')
         buffer[n]='\0';
