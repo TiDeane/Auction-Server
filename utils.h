@@ -58,4 +58,7 @@ bool valid_filesize(long fsize);
 bool file_exists (char *filename);
 bool dir_exists (char *dirpath);
 
+int read_TCP(int TCP_fd, char* buffer);
+int write_TCP(int TCP_fd, char* buffer, int command_len);
+
 #endif /* UTILS_H */

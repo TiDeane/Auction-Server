@@ -85,3 +85,36 @@ bool dir_exists (char *dirpath) {
     struct stat info;
     return (stat(dirpath, &info) == 0 && S_ISDIR(info.st_mode));
 }
+
+int write_TCP(int TCP_fd, char* buffer, int command_len){
+    int bytes_written = 0;
+    int total_bytes_to_write = command_len; // Assuming 'command_len' holds the total length of the data to be sent
+    int remaining_bytes, bytes_sent;
+    while (bytes_written < total_bytes_to_write) {
+        remaining_bytes = total_bytes_to_write - bytes_written;
+        bytes_sent = write(TCP_fd, buffer + bytes_written, remaining_bytes);
+        if (bytes_sent == -1) {
+            return -1;
+        }
+        bytes_written += bytes_sent;
+    }
+    return 0;
+}
+
+int read_TCP(int TCP_fd, char* buffer){
+    int total_bytes_received = 0;
+    int length_buffer = BUFSIZE;
+    int bytes_received;
+    while (1) {
+        // Read from the TCP connection
+        bytes_received = read(TCP_fd, buffer + total_bytes_received, length_buffer - total_bytes_received);
+        if (bytes_received == -1) /*error*/ return -1;
+        if (bytes_received == 0) {
+            // No more data to read
+            return 0;
+        }
+        total_bytes_received += bytes_received;
+    }
+    return 0;
+}
+
