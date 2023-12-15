@@ -94,6 +94,7 @@ int write_TCP(int TCP_fd, char* buffer, int command_len){
         remaining_bytes = total_bytes_to_write - bytes_written;
         bytes_sent = write(TCP_fd, buffer + bytes_written, remaining_bytes);
         if (bytes_sent == -1) {
+            perror("TCP write failed");
             return -1;
         }
         bytes_written += bytes_sent;
@@ -108,7 +109,10 @@ int read_TCP(int TCP_fd, char* buffer){
     while (1) {
         // Read from the TCP connection
         bytes_received = read(TCP_fd, buffer + total_bytes_received, length_buffer - total_bytes_received);
-        if (bytes_received == -1) /*error*/ return -1;
+        if (bytes_received == -1) {
+            perror("TCP read failed");
+            return -1;
+        }
         if (bytes_received == 0) {
             // No more data to read
             return 0;
