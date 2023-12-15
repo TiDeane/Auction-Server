@@ -12,7 +12,7 @@ struct sockaddr_in TCP_addr;
 
 bool verbose_mode = false;
 
-void sigint_handler(int signum) {
+void exit_function(int signum) {
     printf("\nTerminating server...\n");
     close(UDP_fd);
     close(TCP_fd);
@@ -23,25 +23,25 @@ void init_signals() {
     struct sigaction act;
     memset(&act,0,sizeof act);
     act.sa_handler=SIG_IGN;
-    if(sigaction(SIGPIPE,&act,NULL)==-1)/*error*/exit(1);
+    if(sigaction(SIGPIPE,&act,NULL)==-1)/*error*/exit_function(1);
 
     struct sigaction act_child;
     memset(&act_child, 0, sizeof(act_child));
     act_child.sa_handler = SIG_IGN;
     if (sigaction(SIGCHLD, &act_child, NULL) == -1)
-        exit(1);
+        exit_function(1);
     
     struct sigaction act_sev;
     memset(&act_sev, 0, sizeof(act_sev));
     act_sev.sa_handler = SIG_IGN;
     if (sigaction(SIGSEGV, &act_sev, NULL) == -1)
-        exit(1);
+        exit_function(1);
 
     struct sigaction act_int;
     memset(&act_int, 0, sizeof(act_int));
-    act_int.sa_handler = sigint_handler;
+    act_int.sa_handler = exit_function;
     if (sigaction(SIGINT, &act_int, NULL) == -1)
-        exit(1);
+        exit_function(1);
 }
 
 int get_new_AID() {
@@ -226,7 +226,7 @@ void login_command(char *buffer) {
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLI ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -265,7 +265,7 @@ void login_command(char *buffer) {
         
         char response[] = "RLI REG\n"; // New user registered
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -302,7 +302,7 @@ void login_command(char *buffer) {
 
                 char response[] = "RLI OK\n"; // Successfully logged in
                 n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-                if(n==-1) /*error*/ exit(1);
+                if(n==-1) /*error*/ exit_function(1);
 
                 if (verbose_mode) {
                     if(errcode==0) {
@@ -316,7 +316,7 @@ void login_command(char *buffer) {
             } else { // Password doesn't match
                 char response[] = "RLI NOK\n"; // Unsuccessful login
                 n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-                if(n==-1) /*error*/ exit(1);
+                if(n==-1) /*error*/ exit_function(1);
 
                 if (verbose_mode) {
                     if(errcode==0) {
@@ -335,7 +335,7 @@ void login_command(char *buffer) {
 
             char response[] = "RLI REG\n"; // Successfully registered again
             n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-            if(n==-1) /*error*/ exit(1);
+            if(n==-1) /*error*/ exit_function(1);
 
             if (verbose_mode) {
                 if(errcode==0) {
@@ -366,7 +366,7 @@ void logout_command(char* buffer) {
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLO ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -382,7 +382,7 @@ void logout_command(char* buffer) {
     if (!dir_exists(UID_directory)) { // User directory doesn't exist
         char response[] = "RLO UNR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -400,7 +400,7 @@ void logout_command(char* buffer) {
 
         char response[] = "RLO OK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -412,7 +412,7 @@ void logout_command(char* buffer) {
     } else { // User is not logged in
         char response[] = "RLO NOK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -441,7 +441,7 @@ void unregister_command(char* buffer) {
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RUR ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -457,7 +457,7 @@ void unregister_command(char* buffer) {
     if (!dir_exists(UID_directory)) { // User directory does not exist
         char response[] = "RUR UNR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -478,7 +478,7 @@ void unregister_command(char* buffer) {
 
         char response[] = "RUR OK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -497,7 +497,7 @@ void unregister_command(char* buffer) {
                 printf("   To [%s:%s]\n",host,service);
             }
         }
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
         return;
     }
 }
@@ -527,7 +527,7 @@ void open_command(char* buffer, int new_fd, int nread) {
         !valid_value(svalue)||!valid_timeactive(timeactive)||!valid_filesize(fsize)) {
         char response[] = "ROA ERR\n";
         n=write_TCP(new_fd,response,strlen(response));
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -542,7 +542,7 @@ void open_command(char* buffer, int new_fd, int nread) {
     if (!file_exists(UID_login_file_path)) { // User is not logged in
         char response[] = "ROA NLG\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -557,7 +557,7 @@ void open_command(char* buffer, int new_fd, int nread) {
     if (!valid_AID(AID)) { 
         char response[] = "ROA NOK\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -659,7 +659,7 @@ void open_command(char* buffer, int new_fd, int nread) {
     char response[12];
     sprintf(response, "ROA OK %03d\n", AID);
     n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-    if(n==-1)/*error*/exit(1);
+    if(n==-1)/*error*/exit_function(1);
 
     if (verbose_mode) {
         if(errcode==0) {
@@ -695,7 +695,7 @@ void close_command(char* buffer, int new_fd) {
         !check_password_format(password) || !valid_AID(AID)) {
         char response[] = "RCL ERR\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -710,7 +710,7 @@ void close_command(char* buffer, int new_fd) {
     if (!dir_exists(dirname)) {
         char response[] = "RCL NOK\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -732,7 +732,7 @@ void close_command(char* buffer, int new_fd) {
         fclose(pass_file);
         char response[] = "RCL NOK\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -748,7 +748,7 @@ void close_command(char* buffer, int new_fd) {
     if (!file_exists(pathname)) { // User is not logged in
         char response[] = "RCL NLG\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -762,7 +762,7 @@ void close_command(char* buffer, int new_fd) {
     if (!dir_exists(dirname)) { // Auction doesn't exist
         char response[] = "RCL EAU\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -794,7 +794,7 @@ void close_command(char* buffer, int new_fd) {
     if (strcmp(UID_start,UID_given) != 0) { // Auction is not owned by given UID
         char response[] = "RCL EOW\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -809,7 +809,7 @@ void close_command(char* buffer, int new_fd) {
     if (file_exists(pathname)) { // Auction has already ended
         char response[] = "RCL END\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -823,7 +823,7 @@ void close_command(char* buffer, int new_fd) {
 
         char response[] = "RCL OK\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -856,7 +856,7 @@ void show_asset_command(char* buffer, int new_fd) {
     if (sscanf_ret != 1 || !valid_AID(AID)) {
         char response[] = "RSA ERR\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -889,7 +889,7 @@ void show_asset_command(char* buffer, int new_fd) {
     if (!file_exists(pathname)) {
         char response[] = "RSA NOK\n";
         n=write_TCP(new_fd,response,strlen(response));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -921,7 +921,7 @@ void show_asset_command(char* buffer, int new_fd) {
 
     command_length = sprintf(buffer, "RSA OK %s %ld ", fname, Fsize);
     n=write_TCP(new_fd,buffer,command_length); // TODO: Do multiple writes to guarantee
-    if(n==-1)/*error*/exit(1);
+    if(n==-1)/*error*/exit_function(1);
 
     off_t offset = 0;
     ssize_t bytes_sent;
@@ -968,7 +968,7 @@ void myauctions_command(char* buffer) {
     if (sscanf_ret != 1 || !check_UID_format(UID)) {
         char response[] = "RMA ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -983,7 +983,7 @@ void myauctions_command(char* buffer) {
     if (!file_exists(UID_login_file_path)) {
         char response[] = "RMA NLG\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1002,7 +1002,7 @@ void myauctions_command(char* buffer) {
         free(filelist);
         char response[] = "RMA NOK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1057,7 +1057,7 @@ void myauctions_command(char* buffer) {
 
     strcat(buffer,"\n");
     n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-    if(n==-1) /*error*/ exit(1);
+    if(n==-1) /*error*/ exit_function(1);
 
     if (verbose_mode) {
         if(errcode==0) {
@@ -1093,7 +1093,7 @@ void mybids_command(char* buffer) {
     if (sscanf_ret != 1 || !check_UID_format(UID)) {
         char response[] = "RMB ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1108,7 +1108,7 @@ void mybids_command(char* buffer) {
     if (!file_exists(UID_login_file_path)) {
         char response[] = "RMB NLG\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1127,7 +1127,7 @@ void mybids_command(char* buffer) {
         free(filelist);
         char response[] = "RMB NOK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1182,7 +1182,7 @@ void mybids_command(char* buffer) {
 
     strcat(buffer,"\n");
     n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-    if(n==-1) /*error*/ exit(1);
+    if(n==-1) /*error*/ exit_function(1);
 
     if (verbose_mode) {
         if(errcode==0) {
@@ -1223,7 +1223,7 @@ void list_command(char* buffer) {
         free(filelist);
         char response[] = "RLS NOK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1278,7 +1278,7 @@ void list_command(char* buffer) {
 
     strcat(buffer,"\n");
     n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-    if(n==-1) /*error*/ exit(1);
+    if(n==-1) /*error*/ exit_function(1);
 
     if (verbose_mode) {
         if(errcode==0) {
@@ -1319,7 +1319,7 @@ void bid_command(char* buffer, int new_fd) {
     if (sscanf_ret != 4||!check_UID_format(UID)||!check_password_format(password)||!valid_AID(AID)||!valid_value(value)) {
         char response[] = "RBD ERR\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1335,7 +1335,7 @@ void bid_command(char* buffer, int new_fd) {
     if (!dir_exists(dirname)||file_exists(pathname)) {
         char response[] = "RBD NOK\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1349,7 +1349,7 @@ void bid_command(char* buffer, int new_fd) {
     if (!file_exists(pathname)) {
         char response[] = "RBD NLG\n";
         n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-        if(n==-1)/*error*/exit(1);
+        if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1374,7 +1374,7 @@ void bid_command(char* buffer, int new_fd) {
     if(strcmp(auction_host_UID,UID)==0){    //Auction is hosted by the user itself
         char response[] = "RBD ILG\n";
         n = write_TCP(new_fd, response, strlen(response));
-        if (n == -1) /*error*/ exit(1); 
+        if (n == -1) /*error*/ exit_function(1); 
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1387,7 +1387,7 @@ void bid_command(char* buffer, int new_fd) {
     if(auction_value>value){
         char response[] = "RBD REF\n";
         n = write_TCP(new_fd, response, strlen(response));
-        if (n == -1) /*error*/ exit(1);
+        if (n == -1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1409,7 +1409,7 @@ void bid_command(char* buffer, int new_fd) {
         if (value<=biggest_bid) {
             char response[] = "RBD REF\n";
             n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
-            if(n==-1)/*error*/exit(1);
+            if(n==-1)/*error*/exit_function(1);
 
             for (i=0; i<n_bids; i++)
                 free(bidlist[n_bids]);
@@ -1456,7 +1456,7 @@ void bid_command(char* buffer, int new_fd) {
 
     char response[] = "RBD ACC\n";
     n = write_TCP(new_fd, response, strlen(response));
-    if (n == -1) /*error*/ exit(1);
+    if (n == -1) /*error*/ exit_function(1);
 
     if (verbose_mode) {
         if(errcode==0) {
@@ -1495,7 +1495,7 @@ void show_record_command(char* buffer) {
     if (sscanf_ret != 1 || !valid_AID(AID)) {
         char response[] = "RRC ERR\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1510,7 +1510,7 @@ void show_record_command(char* buffer) {
     if (!dir_exists(dirname)) { // Auction doesn't exists
         char response[] = "RRC NOK\n";
         n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit(1);
+        if(n==-1) /*error*/ exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1586,7 +1586,7 @@ void show_record_command(char* buffer) {
 
     strcat(buffer,"\n");
     n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-    if(n==-1) /*error*/ exit(1);
+    if(n==-1) /*error*/ exit_function(1);
 
     if (verbose_mode) {
         if(errcode==0) {
@@ -1628,25 +1628,35 @@ int main(int argc, char **argv) {
     if((errcode=getaddrinfo(NULL,ASport,&hints,&res))!=0) {
         sprintf(buffer,"getaddrinfo error\n");
         write(1,buffer,strlen(buffer));
-        exit(1);
+        exit_function(1);
     }
 
     UDP_fd=socket(res->ai_family,res->ai_socktype,res->ai_protocol);
     if(UDP_fd==-1)
-        exit(1);
+        exit_function(1);
 
     if(bind(UDP_fd,res->ai_addr,res->ai_addrlen)==-1) {
         sprintf(buffer,"Bind error UDP server\n");
         write(1,buffer,strlen(buffer));
-        exit(1);
+        exit_function(1);
     }
     freeaddrinfo(res);
+
+    if (setsockopt(UDP_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout)) < 0) {
+        perror("Setsockopt failed");
+        exit_function(1);
+    }
+
+    if (setsockopt(UDP_fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout)) < 0) {
+        perror("Setsockopt failed");
+        exit_function(1);
+    }
 
     if (verbose_mode)
         printf("Successfully set up UDP socket...\n");
 
     TCP_fd=socket(AF_INET,SOCK_STREAM,0);
-    if (TCP_fd==-1) /*error*/ exit(1);
+    if (TCP_fd==-1) /*error*/ exit_function(1);
 
     memset(&TCP_hints,0,sizeof TCP_hints);
     TCP_hints.ai_family=AF_INET;//IPv4
@@ -1656,17 +1666,17 @@ int main(int argc, char **argv) {
     if(getaddrinfo(NULL,ASport,&TCP_hints,&TCP_res) != 0) {
         sprintf(buffer,"getaddrinfo error\n");
         write(1,buffer,strlen(buffer));
-        exit(1);
+        exit_function(1);
     }
 
     if(bind(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen) == -1) {
         sprintf(buffer,"Bind error TCP server\n");
         write(1,buffer,strlen(buffer));
-        exit(1);
+        exit_function(1);
     }
     freeaddrinfo(TCP_res);
     
-    if(listen(TCP_fd,5)==-1)/*error*/exit(1);
+    if(listen(TCP_fd,5)==-1)/*error*/exit_function(1);
 
     if (verbose_mode) {
         printf("The server is running on verbose mode! A short description of the received requests and the IP and port originating those requests will be displayed, as well as the responses to be sent to each IP and port.\n");
@@ -1694,12 +1704,14 @@ int main(int argc, char **argv) {
                 break;
             case -1:
                 perror("select");
-                exit(1);
+                exit_function(1);
             default:
                 if(FD_ISSET(0,&testfds)) // Detects keyboard input
                 {
                     fgets(in_str,50,stdin);
                     printf("---Input at keyboard: %s\n",in_str);
+                    if (strncmp(in_str, "exit", 4) == 0)
+                        exit_function(0);
                 }
                 if(FD_ISSET(UDP_fd,&testfds)) // Received from UDP
                 {
@@ -1711,7 +1723,7 @@ int main(int argc, char **argv) {
                         
                         sscanf(buffer, "%s ", command);
 
-                        if((pid=fork())==-1) /*error*/ exit(1);
+                        if((pid=fork())==-1) /*error*/ exit_function(1);
                         else if (pid==0) { // Child process
                             if (strcmp(command, "LIN") == 0) {
                                 login_command(buffer);
@@ -1736,7 +1748,7 @@ int main(int argc, char **argv) {
                             } else {
                                 char response[] = "ERR\n";
                                 n=sendto(UDP_fd,response,4,0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-                                if(n==-1) /*error*/ exit(1);
+                                if(n==-1) /*error*/ exit_function(1);
 
                                 if (verbose_mode) {
                                     errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
@@ -1755,9 +1767,9 @@ int main(int argc, char **argv) {
                 {
                     TCP_addrlen = sizeof(TCP_addr);
                     if((new_fd=accept(TCP_fd,(struct sockaddr*)&TCP_addr,&TCP_addrlen))==-1)
-                        /*error*/exit(1);
+                        /*error*/exit_function(1);
                     n=read(new_fd,buffer,BUFSIZE); // Can't read multiple times because of how show_asset is structured
-                    if(n==-1)/*error*/exit(1);
+                    if(n==-1)/*error*/exit_function(1);
 
                     if(n>=0) {
                         if(strlen(buffer)>0)
@@ -1765,7 +1777,7 @@ int main(int argc, char **argv) {
                         
                         sscanf(buffer, "%s ", command);
 
-                        if((pid=fork())==-1) /*error*/ exit(1);
+                        if((pid=fork())==-1) /*error*/ exit_function(1);
                         else if (pid==0) { // Child process
                             if (strcmp(command, "OPA") == 0) {
                                 open_command(buffer, new_fd, n);
@@ -1781,7 +1793,7 @@ int main(int argc, char **argv) {
                             } else {
                                 strcpy(buffer, "ERR\n");
                                 n = write_TCP(new_fd, buffer, strlen(buffer));
-                                if (n == -1) /*error*/ exit(1);
+                                if (n == -1) /*error*/ exit_function(1);
 
                                 if (verbose_mode) {
                                     errcode=getnameinfo((struct sockaddr *)&UDP_addr,addrlen,host,sizeof host, service,sizeof service,0);
@@ -1796,7 +1808,7 @@ int main(int argc, char **argv) {
                             exit(0); // Ends child process
                         }
                         do n=close(new_fd);while(n==-1&&errno==EINTR);
-                        if(n==-1)/*error*/exit(1);
+                        if(n==-1)/*error*/exit_function(1);
                     }
                 }
         }

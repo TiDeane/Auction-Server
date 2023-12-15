@@ -17,43 +17,6 @@ char UID_current[UID_LEN+1];
 char password_current[PW_LEN+1];
 bool logged_in = false;
 
-int user_recvfrom(char* buffer) {
-	char in_str[64];
-	struct timeval timeout;
-	memset((void *)&timeout,0,sizeof(timeout));
-	timeout.tv_sec = 10;
-
-	fd_set readfds;
-	FD_ZERO(&readfds);
-	FD_SET(UDP_fd, &readfds);
-	FD_SET(0, &readfds);
-	int maxfd = (UDP_fd > 0) ? (UDP_fd + 1) : 1;
-
-	while (1) {
-		int out_fds = select(maxfd, &readfds, NULL, NULL, &timeout);
-		if (out_fds == -1) {
-			perror("select");
-			return -1;
-		} else if (out_fds == 0) {
-			printf("Timeout occurred. No response received from server.\n");
-			return 0;
-		} else {
-			if (FD_ISSET(UDP_fd, &readfds)) {
-				int n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr, &addrlen);
-				if (n == -1) {
-					perror("recvfrom");
-					return -1;
-				}
-				return n;
-			} else if (FD_ISSET(0, &readfds)) {
-				fgets(in_str, sizeof(in_str), stdin);
-				printf("---Input at keyboard: %s", in_str);
-				return -2;
-			}
-		}
-	}
-	return 0;
-}
 
 /* Logs into the Auction Server. Command format is "login UID password" */
 void login_command(char* buffer) {
@@ -78,14 +41,28 @@ void login_command(char* buffer) {
 	}
 
 	snprintf(LIN_command, sizeof(LIN_command), "LIN %s %s\n", UID, password);
-
-	n=sendto(UDP_fd,LIN_command,strlen(LIN_command),0,res->ai_addr,res->ai_addrlen);
-	if(n==-1) /*error*/ exit(1);
+	n = sendto(UDP_fd, LIN_command, strlen(LIN_command), 0, res->ai_addr, res->ai_addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("sendto failed");
+			exit(1);
+		}
+	}
 
 	addrlen=sizeof(addr);
-	n=user_recvfrom(buffer);
-	if(n==-1) /*error*/ exit(1);
-	else if(n==0||n==-2) return; // Timeout or keyboard input
+	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("recvfrom failed");
+			exit(1);
+		}
+	}
 
 	if (strncmp(buffer, "RLI REG\n", 8) == 0) {
 		printf("new user registered\n");
@@ -127,13 +104,28 @@ void logout_command() {
 	char LOU_command[STATUS_LEN+UID_LEN+PW_LEN+4];
 	snprintf(LOU_command, sizeof(LOU_command), "LOU %s %s\n", UID_current, password_current);
 
-	n=sendto(UDP_fd,LOU_command,strlen(LOU_command),0,res->ai_addr,res->ai_addrlen);
-	if(n==-1) /*error*/ exit(1);
+	n = sendto(UDP_fd, LOU_command, strlen(LOU_command), 0, res->ai_addr, res->ai_addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("sendto failed");
+			exit(1);
+		}
+	}
 
 	addrlen=sizeof(addr);
-	n=user_recvfrom(buffer);
-	if(n==-1) /*error*/ exit(1);
-	else if(n==0||n==-2) return; // Timeout or keyboard input
+	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("recvfrom failed");
+			exit(1);
+		}
+	}
 
 	if (strncmp(buffer, "RLO OK\n", 7) == 0) {
 		printf("successful logout\n");
@@ -165,16 +157,31 @@ void unregister_command(){
 		return;
 	}
 
-	char UNR_Command[STATUS_LEN+UID_LEN+PW_LEN+4];
-	snprintf(UNR_Command, sizeof(UNR_Command), "UNR %s %s\n", UID_current, password_current);
+	char UNR_command[STATUS_LEN+UID_LEN+PW_LEN+4];
+	snprintf(UNR_command, sizeof(UNR_command), "UNR %s %s\n", UID_current, password_current);
 
-	n=sendto(UDP_fd,UNR_Command,strlen(UNR_Command),0,res->ai_addr,res->ai_addrlen);
-	if(n==-1) /*error*/ exit(1);
+	n = sendto(UDP_fd, UNR_command, strlen(UNR_command), 0, res->ai_addr, res->ai_addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("sendto failed");
+			exit(1);
+		}
+	}
 
 	addrlen=sizeof(addr);
-	n=user_recvfrom(buffer);
-	if(n==-1) /*error*/ exit(1);
-	else if(n==0||n==-2) return; // Timeout or keyboard input
+	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("recvfrom failed");
+			exit(1);
+		}
+	}
 
 	if(strncmp(buffer,"RUR OK\n", 7) == 0){
 		logged_in = false;
@@ -390,22 +397,36 @@ void close_command(char* buffer) {
 
 /* Lists the current user's auctions. Format is "myauctions" or "ma" */ 
 void myauctions_command(){
-	char LMA_Command[STATUS_LEN+UID_LEN+3];
-	int command_length;
+	char LMA_command[STATUS_LEN+UID_LEN+3];
 
 	if(!logged_in){
 		printf("ERR: must login first\n");
 		return;
 	}
 	
-	command_length = sprintf(LMA_Command, "LMA %s\n", UID_current);
-	n=sendto(UDP_fd,LMA_Command,command_length,0,res->ai_addr,res->ai_addrlen);
-	if(n==-1) /*error*/ exit(1);
+	sprintf(LMA_command, "LMA %s\n", UID_current);
+	n = sendto(UDP_fd, LMA_command, strlen(LMA_command), 0, res->ai_addr, res->ai_addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("sendto failed");
+			exit(1);
+		}
+	}
 
 	addrlen=sizeof(addr);
-	n=user_recvfrom(buffer);
-	if(n==-1) /*error*/ exit(1);
-	else if(n==0||n==-2) return; // Timeout or keyboard input
+	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("recvfrom failed");
+			exit(1);
+		}
+	}
 
 	if (buffer[n-1]=='\n')
 		buffer[n]='\0';
@@ -436,22 +457,36 @@ void myauctions_command(){
 
 /* Lists the current user's bids. Command format is "mybids" or "mb" */
 void mybids_command(){
-	char LMB_Command[STATUS_LEN+UID_LEN+3];
-	int command_length;
+	char LMB_command[STATUS_LEN+UID_LEN+3];
 
 	if(!logged_in){
 		printf("ERR: must login first\n");
 		return;
 	}
 
-	command_length = sprintf(LMB_Command, "LMB %s\n", UID_current);
-	n=sendto(UDP_fd,LMB_Command,command_length,0,res->ai_addr,res->ai_addrlen);
-	if(n==-1) /*error*/ exit(1);
+	sprintf(LMB_command, "LMB %s\n", UID_current);
+	n = sendto(UDP_fd, LMB_command, strlen(LMB_command), 0, res->ai_addr, res->ai_addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("sendto failed");
+			exit(1);
+		}
+	}
 
 	addrlen=sizeof(addr);
-	n=user_recvfrom(buffer);
-	if(n==-1) /*error*/ exit(1);
-	else if(n==0||n==-2) return; // Timeout or keyboard input
+	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("recvfrom failed");
+			exit(1);
+		}
+	}
 
 	if (buffer[n-1]=='\n')
 		buffer[n]='\0';
@@ -484,13 +519,28 @@ void mybids_command(){
 void list_command() {
 
 	char LST_command[] = "LST\n";
-	n=sendto(UDP_fd,LST_command,strlen(LST_command),0,res->ai_addr,res->ai_addrlen);
-	if(n==-1) /*error*/ exit(1);
+	n = sendto(UDP_fd, LST_command, strlen(LST_command), 0, res->ai_addr, res->ai_addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("sendto failed");
+			exit(1);
+		}
+	}
 
 	addrlen=sizeof(addr);
-	n=user_recvfrom(buffer);
-	if(n==-1) /*error*/ exit(1);
-	else if(n==0||n==-2) return; // Timeout or keyboard input
+	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("recvfrom failed");
+			exit(1);
+		}
+	}
 
 	if (buffer[n-1]=='\n')
 		buffer[n]='\0';
@@ -738,14 +788,28 @@ void show_record_command(char *buffer){
 	}
 	
 	sprintf(SRC_command, "SRC %03d\n", AID);
-
-	n=sendto(UDP_fd,SRC_command,strlen(SRC_command),0,res->ai_addr,res->ai_addrlen);
-	if(n==-1) /*error*/ exit(1);
+	n = sendto(UDP_fd, SRC_command, strlen(SRC_command), 0, res->ai_addr, res->ai_addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("sendto failed");
+			exit(1);
+		}
+	}
 
 	addrlen=sizeof(addr);
-	n=user_recvfrom(buffer);
-	if(n==-1) /*error*/ exit(1);
-	else if(n==0||n==-2) return; // Timeout or keyboard input
+	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return;
+		} else {
+			perror("recvfrom failed");
+			exit(1);
+		}
+	}
 
 	if (buffer[n-1]=='\n')
 		buffer[n]='\0';
@@ -777,6 +841,9 @@ void show_record_command(char *buffer){
 
 int main(int argc, char **argv) {
 	char command[12];
+	struct timeval timeout;
+	memset((void *)&timeout,0,sizeof(timeout));
+	timeout.tv_sec=10;
 
 	if (argc >= 2) /* At least one argument */
 		for (int i = 1; i < argc; i += 2) {
@@ -788,6 +855,16 @@ int main(int argc, char **argv) {
 
 	UDP_fd=socket(AF_INET,SOCK_DGRAM,0); //UDP socket
 	if(UDP_fd==-1) /*error*/ exit(1);
+
+	if (setsockopt(UDP_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout)) < 0) {
+        perror("Setsockopt failed");
+        exit(1);
+    }
+
+    if (setsockopt(UDP_fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout)) < 0) {
+        perror("Setsockopt failed");
+        exit(1);
+    }
 
 	memset(&hints,0,sizeof hints);
 	hints.ai_family=AF_INET; //IPv4
