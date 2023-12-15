@@ -214,20 +214,29 @@ void open_command(char* buffer) {
 								  timeactive, asset_fname, Fsize);
 
 	TCP_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
-	if (TCP_fd==-1) exit(1); //error
+	if (TCP_fd==-1) {
+		perror("error creating TCP socket");
+		return;
+	}
 
 	memset(&TCP_hints,0,sizeof TCP_hints);
 	TCP_hints.ai_family=AF_INET; //IPv4
 	TCP_hints.ai_socktype=SOCK_STREAM; //TCP socket
 
 	errcode=getaddrinfo(ASIP,ASport,&TCP_hints,&TCP_res);
-	if(errcode!=0)/*error*/exit(1);
+	if(errcode!=0) {
+		perror("error getting address info");
+		return;
+	}
 
 	n=connect(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen);
-	if(n==-1)/*error*/exit(1);
+	if(n==-1) {
+		perror("error connecting to TCP socket");
+		return;
+	}
 
 	n=write_TCP(TCP_fd,buffer,command_length);
-	if(n==-1)/*error*/exit(1);
+	if(n==-1)/*error*/return;
 
 	off_t offset = 0;
 	ssize_t bytes_sent;
@@ -242,7 +251,7 @@ void open_command(char* buffer) {
 	}
 
 	n=read_TCP(TCP_fd,buffer);
-	if(n==-1)/*error*/exit(1);
+	if(n==-1)/*error*/return;
 
 	fclose(file);
 	freeaddrinfo(TCP_res);
@@ -296,23 +305,32 @@ void close_command(char* buffer) {
 	sprintf(CLS_command, "CLS %s %s %03d\n", UID_current, password_current, AID);
 
 	TCP_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
-	if (TCP_fd==-1) exit(1); //error
+	if (TCP_fd==-1) {
+		perror("error creating TCP socket");
+		return;
+	}
 
 	memset(&TCP_hints,0,sizeof TCP_hints);
 	TCP_hints.ai_family=AF_INET; //IPv4
 	TCP_hints.ai_socktype=SOCK_STREAM; //TCP socket
 
 	errcode=getaddrinfo(ASIP,ASport,&TCP_hints,&TCP_res);
-	if(errcode!=0)/*error*/exit(1);
+	if(errcode!=0) {
+		perror("error getting TCP address info");
+		return;
+	}
 
 	n=connect(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen);
-	if(n==-1)/*error*/exit(1);
+	if(n==-1) {
+		perror("error connecting to TCP socket");
+		return;
+	}
 
 	n=write_TCP(TCP_fd,CLS_command,strlen(CLS_command));
-	if(n==-1)/*error*/exit(1);
+	if(n==-1)/*error*/return;
 
 	n=read_TCP(TCP_fd,buffer);
-	if(n==-1)/*error*/exit(1);
+	if(n==-1)/*error*/return;
 
 	freeaddrinfo(TCP_res);
 	close(TCP_fd);
@@ -491,23 +509,32 @@ void show_asset_command(char* buffer) {
 	sprintf(SAS_command, "SAS %03d\n", AID);
 	
 	TCP_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
-	if (TCP_fd==-1) exit(1); //error
+	if (TCP_fd==-1) {
+		perror("error creating TCP socket");
+		return;
+	}
 
 	memset(&TCP_hints,0,sizeof TCP_hints);
 	TCP_hints.ai_family=AF_INET; //IPv4
 	TCP_hints.ai_socktype=SOCK_STREAM; //TCP socket
 
 	errcode=getaddrinfo(ASIP,ASport,&TCP_hints,&TCP_res);
-	if(errcode!=0)/*error*/exit(1);
+	if(errcode!=0) {
+		perror("error getting TCP address info");
+		return;
+	}
 
 	n=connect(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen);
-	if(n==-1)/*error*/exit(1);
+	if(n==-1) {
+		perror("error connecting to TCP socket");
+		return;
+	}
 
 	n=write_TCP(TCP_fd,SAS_command,strlen(SAS_command));
-	if(n==-1)/*error*/exit(1);
+	if(n==-1)/*error*/return;
 
 	nread=read(TCP_fd,buffer,BUFSIZE);
-	if(nread==-1)/*error*/exit(1);
+	if(nread==-1)/*error*/return;
 
 	sscanf_ret = sscanf(buffer, "RSA %s %s %ld", status, fname, &fsize);
 
@@ -624,23 +651,32 @@ void bid_command(char* buffer) {
 	command_len = sprintf(BID_command, "BID %s %s %03d %d\n",UID_current, password_current, AID, value);
 
 	TCP_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
-	if (TCP_fd==-1) exit(1); //error
+	if (TCP_fd==-1) {
+		perror("error creating TCP socket");
+		return;
+	}
 
 	memset(&TCP_hints,0,sizeof TCP_hints);
 	TCP_hints.ai_family=AF_INET; //IPv4
 	TCP_hints.ai_socktype=SOCK_STREAM; //TCP socket
 
 	errcode=getaddrinfo(ASIP,ASport,&TCP_hints,&TCP_res);
-	if(errcode!=0)/*error*/exit(1);
+	if(errcode!=0) {
+		perror("error getting TCP address info");
+		return;
+	}
 
 	n=connect(TCP_fd,TCP_res->ai_addr,TCP_res->ai_addrlen);
-	if(n==-1)/*error*/exit(1);
+	if(n==-1) {
+		perror("error connecting to TCP socket");
+		return;
+	}
 
 	n=write_TCP(TCP_fd,BID_command,command_len);
-	if(n==-1)/*error*/exit(1); 
+	if(n==-1)/*error*/return;
 
 	n=read_TCP(TCP_fd,buffer);
-	if(n==-1)/*error*/exit(1);
+	if(n==-1)/*error*/return;
 
 	if (strncmp(buffer, "RBD NOK\n", 8) == 0) {
 		printf("Auction %03d is not active\n", AID);
@@ -746,11 +782,13 @@ int main(int argc, char **argv) {
 
 	if (setsockopt(UDP_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout)) < 0) {
         perror("Setsockopt failed");
+		close(UDP_fd);
         exit(1);
     }
 
     if (setsockopt(UDP_fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout)) < 0) {
         perror("Setsockopt failed");
+		close(UDP_fd);
         exit(1);
     }
 
@@ -759,7 +797,11 @@ int main(int argc, char **argv) {
 	hints.ai_socktype=SOCK_DGRAM; //UDP socket
 
 	errcode=getaddrinfo(ASIP,ASport,&hints,&res);
-	if(errcode!=0) /*error*/ exit(1);
+	if(errcode!=0) {
+		perror("error getting address info");
+		close(UDP_fd);
+		exit(1);
+	}
 
 	while(1) {
 
