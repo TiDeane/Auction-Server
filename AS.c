@@ -225,8 +225,8 @@ void login_command(char *buffer) {
 
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLI ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -264,8 +264,8 @@ void login_command(char *buffer) {
         }
         
         char response[] = "RLI REG\n"; // New user registered
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -301,8 +301,8 @@ void login_command(char *buffer) {
                 }
 
                 char response[] = "RLI OK\n"; // Successfully logged in
-                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-                if(n==-1) /*error*/ exit_function(1);
+                if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+                    return;
 
                 if (verbose_mode) {
                     if(errcode==0) {
@@ -315,8 +315,8 @@ void login_command(char *buffer) {
                 return;
             } else { // Password doesn't match
                 char response[] = "RLI NOK\n"; // Unsuccessful login
-                n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-                if(n==-1) /*error*/ exit_function(1);
+                if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+                    return;
 
                 if (verbose_mode) {
                     if(errcode==0) {
@@ -334,8 +334,8 @@ void login_command(char *buffer) {
             }
 
             char response[] = "RLI REG\n"; // Successfully registered again
-            n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-            if(n==-1) /*error*/ exit_function(1);
+            if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+                return;
 
             if (verbose_mode) {
                 if(errcode==0) {
@@ -365,8 +365,8 @@ void logout_command(char* buffer) {
 
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RLO ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -381,8 +381,8 @@ void logout_command(char* buffer) {
 
     if (!dir_exists(UID_directory)) { // User directory doesn't exist
         char response[] = "RLO UNR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -399,8 +399,8 @@ void logout_command(char* buffer) {
         remove(UID_login_file_path);
 
         char response[] = "RLO OK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -411,8 +411,8 @@ void logout_command(char* buffer) {
         return;
     } else { // User is not logged in
         char response[] = "RLO NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -440,8 +440,8 @@ void unregister_command(char* buffer) {
 
     if (sscanf_ret != 2 || !check_UID_format(UID) || !check_password_format(password)) {
         char response[] = "RUR ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -456,8 +456,8 @@ void unregister_command(char* buffer) {
 
     if (!dir_exists(UID_directory)) { // User directory does not exist
         char response[] = "RUR UNR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -477,8 +477,8 @@ void unregister_command(char* buffer) {
         remove(UID_pass_file_path);
 
         char response[] = "RUR OK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -489,7 +489,8 @@ void unregister_command(char* buffer) {
         return;
     } else {
         char response[] = "RUR NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -920,7 +921,7 @@ void show_asset_command(char* buffer, int new_fd) {
     }
 
     command_length = sprintf(buffer, "RSA OK %s %ld ", fname, Fsize);
-    n=write_TCP(new_fd,buffer,command_length); // TODO: Do multiple writes to guarantee
+    n=write_TCP(new_fd,buffer,command_length);
     if(n==-1)/*error*/exit_function(1);
 
     off_t offset = 0;
@@ -934,6 +935,9 @@ void show_asset_command(char* buffer, int new_fd) {
         }
     }
     fclose(file);
+
+    n=write_TCP(new_fd,"\n",1);
+    if(n==-1)/*error*/exit_function(1);
 
     if (verbose_mode) {
         if(errcode==0)
@@ -967,8 +971,8 @@ void myauctions_command(char* buffer) {
 
     if (sscanf_ret != 1 || !check_UID_format(UID)) {
         char response[] = "RMA ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -982,8 +986,8 @@ void myauctions_command(char* buffer) {
     sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) {
         char response[] = "RMA NLG\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1001,8 +1005,8 @@ void myauctions_command(char* buffer) {
         free(filelist[1]); // ".."
         free(filelist);
         char response[] = "RMA NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1056,8 +1060,8 @@ void myauctions_command(char* buffer) {
     free(filelist);
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-    if(n==-1) /*error*/ exit_function(1);
+    if ((n = sendto_server(UDP_fd,buffer,UDP_addr)) < 0)
+        return;
 
     if (verbose_mode) {
         if(errcode==0) {
@@ -1092,8 +1096,8 @@ void mybids_command(char* buffer) {
     
     if (sscanf_ret != 1 || !check_UID_format(UID)) {
         char response[] = "RMB ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1107,8 +1111,8 @@ void mybids_command(char* buffer) {
     sprintf(UID_login_file_path, "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) {
         char response[] = "RMB NLG\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1126,8 +1130,8 @@ void mybids_command(char* buffer) {
         free(filelist[1]); // ".."
         free(filelist);
         char response[] = "RMB NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1181,8 +1185,8 @@ void mybids_command(char* buffer) {
     free(filelist);
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-    if(n==-1) /*error*/ exit_function(1);
+    if ((n = sendto_server(UDP_fd,buffer,UDP_addr)) < 0)
+        return;
 
     if (verbose_mode) {
         if(errcode==0) {
@@ -1222,8 +1226,8 @@ void list_command(char* buffer) {
         free(filelist[2]); // ".gitkeep"
         free(filelist);
         char response[] = "RLS NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1277,8 +1281,8 @@ void list_command(char* buffer) {
     free(filelist);
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-    if(n==-1) /*error*/ exit_function(1);
+    if ((n = sendto_server(UDP_fd,buffer,UDP_addr)) < 0)
+        return;
 
     if (verbose_mode) {
         if(errcode==0) {
@@ -1443,7 +1447,9 @@ void bid_command(char* buffer, int new_fd) {
     else
         return;
 
-    sprintf(filecontents,"%s %d %s %ld",UID,value,date_time,fulltime);
+    long bidtime = fulltime - stime_seconds;
+
+    sprintf(filecontents,"%s %d %s %ld",UID,value,date_time,bidtime);
     fwrite(filecontents,1,strlen(filecontents),bid_file);
     fclose(bid_file);
 
@@ -1494,8 +1500,8 @@ void show_record_command(char* buffer) {
 
     if (sscanf_ret != 1 || !valid_AID(AID)) {
         char response[] = "RRC ERR\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1509,8 +1515,8 @@ void show_record_command(char* buffer) {
     sprintf(dirname,"AUCTIONS/%03d",AID);
     if (!dir_exists(dirname)) { // Auction doesn't exists
         char response[] = "RRC NOK\n";
-        n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-        if(n==-1) /*error*/ exit_function(1);
+        if ((n = sendto_server(UDP_fd,response,UDP_addr)) < 0)
+            return;
 
         if (verbose_mode) {
             if(errcode==0) {
@@ -1585,8 +1591,8 @@ void show_record_command(char* buffer) {
     }
 
     strcat(buffer,"\n");
-    n=sendto(UDP_fd,buffer,strlen(buffer),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
-    if(n==-1) /*error*/ exit_function(1);
+    if ((n = sendto_server(UDP_fd,buffer,UDP_addr)) < 0)
+        return;
 
     if (verbose_mode) {
         if(errcode==0) {

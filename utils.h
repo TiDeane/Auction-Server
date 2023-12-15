@@ -60,5 +60,8 @@ bool dir_exists (char *dirpath);
 
 int read_TCP(int TCP_fd, char* buffer);
 int write_TCP(int TCP_fd, char* buffer, int command_len);
+int sendto_user(int UDP_fd, char* message, struct addrinfo *res);
+int recvfrom_user(int UDP_fd, char* buffer, struct sockaddr_in addr, socklen_t addrlen);
+int sendto_server(int UDP_fd, char* buffer, struct sockaddr_in UDP_addr);
 
 #endif /* UTILS_H */

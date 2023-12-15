@@ -41,28 +41,12 @@ void login_command(char* buffer) {
 	}
 
 	snprintf(LIN_command, sizeof(LIN_command), "LIN %s %s\n", UID, password);
-	n = sendto(UDP_fd, LIN_command, strlen(LIN_command), 0, res->ai_addr, res->ai_addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("sendto failed");
-			exit(1);
-		}
-	}
+	if ((n = sendto_user(UDP_fd, LIN_command, res)) < 0)
+		return;
 
 	addrlen=sizeof(addr);
-	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("recvfrom failed");
-			exit(1);
-		}
-	}
+	if ((n = recvfrom_user(UDP_fd, buffer, addr, addrlen)) < 0)
+		return;
 
 	if (strncmp(buffer, "RLI REG\n", 8) == 0) {
 		printf("new user registered\n");
@@ -104,28 +88,12 @@ void logout_command() {
 	char LOU_command[STATUS_LEN+UID_LEN+PW_LEN+4];
 	snprintf(LOU_command, sizeof(LOU_command), "LOU %s %s\n", UID_current, password_current);
 
-	n = sendto(UDP_fd, LOU_command, strlen(LOU_command), 0, res->ai_addr, res->ai_addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("sendto failed");
-			exit(1);
-		}
-	}
+	if ((n = sendto_user(UDP_fd, LOU_command, res)) < 0)
+		return;
 
 	addrlen=sizeof(addr);
-	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("recvfrom failed");
-			exit(1);
-		}
-	}
+	if ((n = recvfrom_user(UDP_fd, buffer, addr, addrlen)) < 0)
+		return;
 
 	if (strncmp(buffer, "RLO OK\n", 7) == 0) {
 		printf("successful logout\n");
@@ -160,28 +128,12 @@ void unregister_command(){
 	char UNR_command[STATUS_LEN+UID_LEN+PW_LEN+4];
 	snprintf(UNR_command, sizeof(UNR_command), "UNR %s %s\n", UID_current, password_current);
 
-	n = sendto(UDP_fd, UNR_command, strlen(UNR_command), 0, res->ai_addr, res->ai_addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("sendto failed");
-			exit(1);
-		}
-	}
+	if ((n = sendto_user(UDP_fd, UNR_command, res)) < 0)
+		return;
 
 	addrlen=sizeof(addr);
-	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("recvfrom failed");
-			exit(1);
-		}
-	}
+	if ((n = recvfrom_user(UDP_fd, buffer, addr, addrlen)) < 0)
+		return;
 
 	if(strncmp(buffer,"RUR OK\n", 7) == 0){
 		logged_in = false;
@@ -405,28 +357,12 @@ void myauctions_command(){
 	}
 	
 	sprintf(LMA_command, "LMA %s\n", UID_current);
-	n = sendto(UDP_fd, LMA_command, strlen(LMA_command), 0, res->ai_addr, res->ai_addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("sendto failed");
-			exit(1);
-		}
-	}
+	if ((n = sendto_user(UDP_fd, LMA_command, res)) < 0)
+		return;
 
 	addrlen=sizeof(addr);
-	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("recvfrom failed");
-			exit(1);
-		}
-	}
+	if ((n = recvfrom_user(UDP_fd, buffer, addr, addrlen)) < 0)
+		return;
 
 	if (buffer[n-1]=='\n')
 		buffer[n]='\0';
@@ -465,28 +401,12 @@ void mybids_command(){
 	}
 
 	sprintf(LMB_command, "LMB %s\n", UID_current);
-	n = sendto(UDP_fd, LMB_command, strlen(LMB_command), 0, res->ai_addr, res->ai_addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("sendto failed");
-			exit(1);
-		}
-	}
+	if ((n = sendto_user(UDP_fd, LMB_command, res)) < 0)
+		return;
 
 	addrlen=sizeof(addr);
-	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("recvfrom failed");
-			exit(1);
-		}
-	}
+	if ((n = recvfrom_user(UDP_fd, buffer, addr, addrlen)) < 0)
+		return;
 
 	if (buffer[n-1]=='\n')
 		buffer[n]='\0';
@@ -519,28 +439,12 @@ void mybids_command(){
 void list_command() {
 
 	char LST_command[] = "LST\n";
-	n = sendto(UDP_fd, LST_command, strlen(LST_command), 0, res->ai_addr, res->ai_addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("sendto failed");
-			exit(1);
-		}
-	}
+	if ((n = sendto_user(UDP_fd, LST_command, res)) < 0)
+		return;
 
 	addrlen=sizeof(addr);
-	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("recvfrom failed");
-			exit(1);
-		}
-	}
+	if ((n = recvfrom_user(UDP_fd, buffer, addr, addrlen)) < 0)
+		return;
 
 	if (buffer[n-1]=='\n')
 		buffer[n]='\0';
@@ -788,28 +692,12 @@ void show_record_command(char *buffer){
 	}
 	
 	sprintf(SRC_command, "SRC %03d\n", AID);
-	n = sendto(UDP_fd, SRC_command, strlen(SRC_command), 0, res->ai_addr, res->ai_addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("sendto failed");
-			exit(1);
-		}
-	}
+	if ((n = sendto_user(UDP_fd, SRC_command, res)) < 0)
+		return;
 
 	addrlen=sizeof(addr);
-	n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr,&addrlen);
-	if(n==-1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			printf("Timeout detected, exiting function.\n");
-			return;
-		} else {
-			perror("recvfrom failed");
-			exit(1);
-		}
-	}
+	if ((n = recvfrom_user(UDP_fd, buffer, addr, addrlen)) < 0)
+		return;
 
 	if (buffer[n-1]=='\n')
 		buffer[n]='\0';

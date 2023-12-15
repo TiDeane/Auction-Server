@@ -117,3 +117,45 @@ int read_TCP(int TCP_fd, char* buffer){
     }
     return 0;
 }
+
+int sendto_user(int UDP_fd, char* message, struct addrinfo *res) {
+    int n = sendto(UDP_fd, message, strlen(message), 0, res->ai_addr, res->ai_addrlen);
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return -2;
+		} else {
+			perror("sendto failed");
+			return -1;
+		}
+	}
+    return n;
+}
+
+int recvfrom_user(int UDP_fd, char* buffer, struct sockaddr_in addr, socklen_t addrlen) {
+    int n = recvfrom(UDP_fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr, &addrlen);
+    if (n == -1) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            printf("Timeout detected, exiting function.\n");
+            return -2;
+        } else {
+            perror("recvfrom failed");
+            return -1;
+        }
+    }
+    return n;
+}
+
+int sendto_server(int UDP_fd, char* response, struct sockaddr_in UDP_addr) {
+    int n=sendto(UDP_fd,response,strlen(response),0,(struct sockaddr*)&UDP_addr,sizeof(UDP_addr));
+	if(n==-1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			printf("Timeout detected, exiting function.\n");
+			return -2;
+		} else {
+			perror("sendto failed");
+			return -1;
+		}
+	}
+    return n;
+}
