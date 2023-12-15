@@ -1472,7 +1472,7 @@ void bid_command(char* buffer, int new_fd) {
     else
         return;
 
-    long bidtime = fulltime - stime_seconds;
+    long bidtime = ((long)fulltime) - stime_seconds;
 
     sprintf(filecontents,"%s %d %s %ld",UID,value,date_time,bidtime);
     fwrite(filecontents,1,strlen(filecontents),bid_file);
@@ -1793,7 +1793,8 @@ int main(int argc, char **argv) {
                                     }
                                 }
                             }
-                            exit_function(0); // Ends child process
+                            close(UDP_fd);
+                            exit(0); // Ends child process
                         }
                     }
                 }
@@ -1838,8 +1839,9 @@ int main(int argc, char **argv) {
                                     }
                                 }
                             }
+                            close(TCP_fd);
                             close(new_fd);
-                            exit_function(0); // Ends child process
+                            exit(0); // Ends child process
                         }
                         do n=close(new_fd);while(n==-1&&errno==EINTR);
                         if(n==-1)/*error*/exit_function(1);
