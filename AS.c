@@ -542,7 +542,7 @@ void open_command(char* buffer, int new_fd, int nread) {
     snprintf(UID_login_file_path, sizeof(UID_login_file_path), "USERS/%s/%s_login.txt", UID, UID);
     if (!file_exists(UID_login_file_path)) { // User is not logged in
         char response[] = "ROA NLG\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -557,7 +557,7 @@ void open_command(char* buffer, int new_fd, int nread) {
     AID = get_new_AID(); 
     if (!valid_AID(AID)) { 
         char response[] = "ROA NOK\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -659,7 +659,7 @@ void open_command(char* buffer, int new_fd, int nread) {
 
     char response[12];
     sprintf(response, "ROA OK %03d\n", AID);
-    n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+    n=write_TCP(new_fd,response,strlen(response));
     if(n==-1)/*error*/exit_function(1);
 
     if (verbose_mode) {
@@ -695,7 +695,7 @@ void close_command(char* buffer, int new_fd) {
     if (sscanf_ret != 3 || !check_UID_format(UID_given) ||
         !check_password_format(password) || !valid_AID(AID)) {
         char response[] = "RCL ERR\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -710,7 +710,7 @@ void close_command(char* buffer, int new_fd) {
     sprintf(dirname, "USERS/%s/", UID_given);
     if (!dir_exists(dirname)) {
         char response[] = "RCL NOK\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -732,7 +732,7 @@ void close_command(char* buffer, int new_fd) {
     if (strncmp(buffer,password,PW_LEN) != 0) { // If password doesn't match
         fclose(pass_file);
         char response[] = "RCL NOK\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -748,7 +748,7 @@ void close_command(char* buffer, int new_fd) {
     sprintf(pathname,"USERS/%s/%s_login.txt",UID_given,UID_given);
     if (!file_exists(pathname)) { // User is not logged in
         char response[] = "RCL NLG\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -762,7 +762,7 @@ void close_command(char* buffer, int new_fd) {
     sprintf(dirname, "AUCTIONS/%03d/", AID);
     if (!dir_exists(dirname)) { // Auction doesn't exist
         char response[] = "RCL EAU\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -794,7 +794,7 @@ void close_command(char* buffer, int new_fd) {
 
     if (strcmp(UID_start,UID_given) != 0) { // Auction is not owned by given UID
         char response[] = "RCL EOW\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -809,7 +809,7 @@ void close_command(char* buffer, int new_fd) {
     sprintf(pathname, "AUCTIONS/%03d/END_%03d.txt",AID,AID);
     if (file_exists(pathname)) { // Auction has already ended
         char response[] = "RCL END\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -823,7 +823,7 @@ void close_command(char* buffer, int new_fd) {
         end_auction(AID,end_sec_time,current_time);
 
         char response[] = "RCL OK\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -856,7 +856,7 @@ void show_asset_command(char* buffer, int new_fd) {
 
     if (sscanf_ret != 1 || !valid_AID(AID)) {
         char response[] = "RSA ERR\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -1308,10 +1308,11 @@ void bid_command(char* buffer, int new_fd) {
     char auction_fname[MAX_FNAME_LEN+1];
     char auction_sdate[DATE_LEN+1];
     char auction_stime[TIME_LEN+1];
-    long auction_duration_sec, stime_seconds;
+    long auction_duration_sec, stime_seconds, end_sec_time;
     char date_time[DATE_LEN+TIME_LEN+2];
     char filecontents[UID_LEN+MAX_VALUE_LEN+
                        MAX_DURATION_LEN+DATE_LEN+TIME_LEN+MAX_FULLTIME+8];
+    time_t current_time;
 
     sscanf_ret = sscanf(buffer,"BID %s %s %d %d",UID,password,&AID,&value);
     
@@ -1322,7 +1323,7 @@ void bid_command(char* buffer, int new_fd) {
 
     if (sscanf_ret != 4||!check_UID_format(UID)||!check_password_format(password)||!valid_AID(AID)||!valid_value(value)) {
         char response[] = "RBD ERR\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -1335,24 +1336,24 @@ void bid_command(char* buffer, int new_fd) {
     }
 
     sprintf(dirname, "AUCTIONS/%03d/",AID);
-    sprintf(pathname,"AUCTIONS/%03d/END_%03d.txt",AID,AID);
-    if (!dir_exists(dirname)||file_exists(pathname)) {
+    if (!dir_exists(dirname)) {
         char response[] = "RBD NOK\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
             if(errcode==0) {
-                printf("Could not bid because auction has already ended, sending response %s",response);
+                printf("Could not bid because auction doesn't exist, sending response %s",response);
                 printf("   To [%s:%s]\n",host,service);
             }
         }
         return;
     }
+
     sprintf(pathname,"USERS/%s/%s_login.txt",UID,UID);
     if (!file_exists(pathname)) {
         char response[] = "RBD NLG\n";
-        n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+        n=write_TCP(new_fd,response,strlen(response));
         if(n==-1)/*error*/exit_function(1);
 
         if (verbose_mode) {
@@ -1375,6 +1376,30 @@ void bid_command(char* buffer, int new_fd) {
 
     sscanf(info,"%s %s %s %d %ld %s %s %ld",auction_host_UID,auction_name,auction_fname,
             &auction_value,&auction_duration_sec,auction_sdate,auction_stime,&stime_seconds);
+
+    current_time = time(NULL);
+    end_sec_time = difftime(current_time,(time_t)stime_seconds);
+    if (end_sec_time >= auction_duration_sec) { // Ends auction if it's duration has been exceeded
+        end_sec_time = auction_duration_sec;
+        current_time = stime_seconds + auction_duration_sec;
+        end_auction(AID,end_sec_time,current_time);
+    }
+
+    sprintf(pathname,"AUCTIONS/%03d/END_%03d.txt",AID,AID);
+    if (file_exists(pathname)) {
+        char response[] = "RBD NOK\n";
+        n=write_TCP(new_fd,response,strlen(response));
+        if(n==-1)/*error*/exit_function(1);
+
+        if (verbose_mode) {
+            if(errcode==0) {
+                printf("Could not bid because auction has already ended, sending response %s",response);
+                printf("   To [%s:%s]\n",host,service);
+            }
+        }
+        return;
+    }
+
     if(strcmp(auction_host_UID,UID)==0){    //Auction is hosted by the user itself
         char response[] = "RBD ILG\n";
         n = write_TCP(new_fd, response, strlen(response));
@@ -1412,7 +1437,7 @@ void bid_command(char* buffer, int new_fd) {
         sscanf(bidlist[n_bids-1]->d_name, "%d.txt", &biggest_bid);
         if (value<=biggest_bid) {
             char response[] = "RBD REF\n";
-            n=write_TCP(new_fd,response,strlen(response)); // TODO: Do multiple writes to guarantee
+            n=write_TCP(new_fd,response,strlen(response));
             if(n==-1)/*error*/exit_function(1);
 
             for (i=0; i<n_bids; i++)
