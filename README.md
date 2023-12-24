@@ -1,4 +1,4 @@
-# Auction Server Project
+# Auction Server
 
 This project implements a simple auction platform. Users can open (host) an auction to sell some asset, and close it, as well list ongoing auctions and make bids.
 
